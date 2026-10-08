@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SAYMODZ Chat</title>
+<style>
+:root{--bg-dark:#121417;--bg-panel:#1e222a;--bg-card:#282c34;--border:#3b404d;--accent:#5c7cfa;--text:#e6e9ef;--text-sub:#9ea4b0;--danger:#f75b5b;--admin-color:#ffd700}
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;user-select:none;-webkit-user-select:none;font-size:10px}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-dark);color:var(--text)}
+#app{display:flex;width:100vw;height:100vh;position:relative;overflow:hidden}
+.overlay{position:absolute;inset:0;z-index:999;background:var(--bg-dark);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:10px}
+.box{width:100%;max-width:200px;background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;padding:12px;text-align:center}
+.t{font-size:12px;font-weight:bold;color:var(--accent);margin-bottom:2px}
+.sub{font-size:8.5px;color:var(--text-sub);margin-bottom:8px}
+.inp{width:100%;padding:5px 6px;background:var(--bg-dark);border:1px solid var(--border);border-radius:4px;color:#fff;margin-bottom:6px;outline:none;font-size:9px;user-select:text;-webkit-user-select:text}
+.inp:focus{border-color:var(--accent)}
+.btn{width:100%;padding:5px;background:var(--accent);border:none;border-radius:4px;color:#fff;font-weight:bold;font-size:9px;cursor:pointer}
+.btn:disabled{opacity:.5}
+.btn.sm{width:auto;padding:3px 6px;font-size:8px}
+.btn.red{background:var(--danger)}
+.link{margin-top:6px;font-size:8px;color:var(--text-sub);cursor:pointer}
+.link span{color:var(--accent)}
+.side{width:36px;height:100vh;background:var(--bg-panel);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:6px 0;gap:8px;flex-shrink:0;justify-content:space-between}
+.side-g{display:flex;flex-direction:column;gap:8px;align-items:center}
+.si{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;background:var(--bg-card);border:1px solid var(--border);position:relative}
+.si.active{background:var(--accent);border-color:var(--accent)}
+.dot{position:absolute;top:2px;right:2px;width:6px;height:6px;background:var(--danger);border-radius:50%;display:none}
+.dot.on{display:block}
+.main{flex:1;height:100vh;display:flex;flex-direction:column;overflow:hidden;position:relative;min-width:0}
+.top{height:24px;background:var(--bg-panel);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 6px;flex-shrink:0}
+.top b{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.act{color:var(--text-sub);cursor:pointer;margin-left:4px;font-size:8px}
+.content{flex:1;overflow:hidden;position:relative;display:flex;flex-direction:column;min-height:0;background:var(--bg-dark)}
+.scroll{flex:1;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:5px;min-height:0}
+.row{display:flex;align-items:center;gap:5px;padding:4px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;font-size:8.5px;cursor:pointer}
+.row .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.av{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;flex-shrink:0;color:#fff}
+.h{font-size:8.5px;color:var(--text-sub);margin:4px 2px 0}
+.chips{display:flex;gap:4px;overflow-x:auto;padding:4px;border-bottom:1px solid var(--border);flex-shrink:0}
+.chip{padding:2px 6px;border-radius:10px;background:var(--bg-card);border:1px solid var(--border);font-size:8px;white-space:nowrap;cursor:pointer}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.msg{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:4px 6px;max-width:85%;align-self:flex-start;touch-action:pan-y}
+.msg.me{align-self:flex-end;background:rgba(92,124,250,.2);border-color:var(--accent)}
+.msg.adm{border-color:rgba(255,215,0,.4)}
+.msg .rp{background:rgba(0,0,0,.25);border-left:2px solid var(--accent);padding:2px 4px;margin-bottom:3px;font-size:7.5px;color:var(--text-sub)}
+.msg .hd{display:flex;justify-content:space-between;align-items:center;font-size:7.5px;margin-bottom:2px;gap:6px}
+.msg .nm{font-weight:bold;cursor:pointer;display:flex;align-items:center;gap:3px}
+.msg .tm{color:var(--text-sub);white-space:nowrap}
+.msg .tx{font-size:8.5px;word-break:break-word}
+.tick{color:var(--text-sub);font-size:7.5px;margin-left:3px}
+.tick.seen{color:var(--accent)}
+.reply{display:none;background:var(--bg-card);padding:2px 6px;font-size:8px;color:var(--text-sub);justify-content:space-between;border-top:1px solid var(--border)}
+.reply.on{display:flex}
+.bar{padding:3px 4px;background:var(--bg-panel);border-top:1px solid var(--border);display:flex;gap:3px;align-items:center;flex-shrink:0}
+.bar .inp{margin:0}
+.drawer{position:absolute;top:0;right:-160px;width:160px;height:100%;background:var(--bg-panel);border-left:1px solid var(--border);z-index:50;transition:right .25s;display:flex;flex-direction:column;padding:6px}
+.drawer.open{right:0}
+.modal{position:absolute;inset:0;background:rgba(0,0,0,.85);z-index:1000;display:none;justify-content:center;align-items:center;padding:8px}
+.modal.on{display:flex}
+.mbox{background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;width:100%;max-width:280px;max-height:90vh;display:flex;flex-direction:column}
+.mhead{padding:6px 8px;background:var(--bg-card);border-bottom:1px solid var(--border);font-size:9px;font-weight:bold}
+.mbody{padding:8px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.grid .av{width:100%;aspect-ratio:1;font-size:13px;cursor:pointer;border:2px solid transparent}
+.grid .av.sel{border-color:#fff}
+.ban{position:absolute;inset:0;background:var(--bg-dark);z-index:2000;display:none;align-items:center;justify-content:center;padding:10px}
+.ban.on{display:flex}
+.toast{position:absolute;top:28px;left:50%;transform:translateX(-50%);z-index:1500;padding:5px 10px;border-radius:4px;font-size:8.5px;color:#fff;display:none;max-width:90%;text-align:center;cursor:pointer}
+.toast.on{display:block}
+.err{display:none;color:var(--danger);font-size:8px;text-align:left;margin:-3px 0 5px 2px;line-height:1.3}
+.err.on{display:block}
+.inp.bad{border-color:var(--danger)}
+.ed{color:var(--text-sub);font-size:7px;font-style:italic;margin-left:3px}
+.msg{-webkit-touch-callout:none}
+.content{min-width:0}
+.body{flex:1;display:flex;min-height:0;min-width:0}
+.uside{width:100px;flex-shrink:0;margin:6px 6px 6px 8px;background:var(--bg-panel);border:1px solid var(--border);border-radius:4px;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+.uhd{font-size:8.5px;font-weight:bold;padding:4px 5px;border-bottom:1px solid var(--border);white-space:nowrap}
+.uscroll{flex:1;overflow-y:auto;padding:4px;display:flex;flex-direction:column;gap:4px;min-height:0}
+.uscroll .row{padding:3px}
+@media (max-width:420px){.uside{width:78px;margin-left:6px}}
+::-webkit-scrollbar{width:2px}::-webkit-scrollbar-thumb{background:var(--border)}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- GİRİŞ -->
+<div id="auth" class="overlay">
+  <div class="box">
+    <div class="t">SAYMODZ CHAT</div>
+    <div id="autoBox" style="display:none">
+      <div class="sub" style="color:var(--accent)">Kayıtlı Hesap Bulundu</div>
+      <div id="autoUser" style="font-weight:bold;font-size:10px;margin-bottom:8px"></div>
+      <button class="btn" onclick="confirmAuto()">Devam Et</button>
+      <div class="link" onclick="normalLogin()"><span>Farklı Hesapla Giriş Yap</span></div>
+    </div>
+    <div id="normBox">
+      <div class="sub" id="authSub">Giriş Yap</div>
+      <input id="authU" class="inp" placeholder="Kullanıcı Adı" oninput="clrErr('authU','uErr')">
+      <div class="err" id="uErr"></div>
+      <input id="authP" type="password" class="inp" placeholder="Şifre" oninput="clrErr('authP','pErr')">
+      <div class="err" id="pErr"></div>
+      <div class="err" id="gErr"></div>
+      <button class="btn" id="authBtn" onclick="handleAuth()">Giriş Yap</button>
+      <div class="link" id="toggleTxt" onclick="toggleReg()">Hesabın yok mu? <span>Kayıt Ol</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- SOL MENÜ -->
+<div class="side">
+  <div class="side-g">
+    <div class="si active" id="t-chat" onclick="go('chan','genel')" title="Sohbet">💬</div>
+    <div class="si" id="t-ann" onclick="go('chan','duyurular')" title="Duyurular">📢</div>
+    <div class="si" id="t-dm" onclick="go('dmlist')" title="Mesajlar">✉️<i class="dot" id="d-dm"></i></div>
+    <div class="si" id="t-fr" onclick="go('friends')" title="Arkadaşlar">👥<i class="dot" id="d-fr"></i></div>
+    <div class="si" id="t-gr" onclick="go('grlist')" title="Gruplar">🧩</div>
+  </div>
+  <div class="si" onclick="openSettings()" title="Profil & Ayarlar" style="border-color:var(--accent)">⚙️</div>
+</div>
+
+<!-- ANA ALAN -->
+<div class="main">
+  <div class="top"><b id="title">💬 Genel</b><span class="act" id="cnt" onclick="openOnline()" style="font-size:9px;color:var(--text)">👥 0/0</span></div>
+  <div class="body">
+    <div class="content" id="content"></div>
+    <div class="uside">
+      <div class="uhd">👥 Kullanıcılar</div>
+      <div class="uscroll">
+        <div class="h">Çevrimiçi</div><div id="pOn" style="display:flex;flex-direction:column;gap:4px"></div>
+        <div class="h">Çevrimdışı</div><div id="pOff" style="display:flex;flex-direction:column;gap:4px"></div>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast" onclick="this.classList.remove('on')"></div>
+</div>
+
+<!-- BAN EKRANI -->
+<div class="ban" id="banScr"></div>
+
+<!-- AYARLAR -->
+<div class="modal" id="setM"><div class="mbox">
+  <div class="mhead">⚙️ Profil & Ayarlar</div>
+  <div class="mbody">
+    <div id="setName" style="font-size:9px"></div>
+    <div class="h">Logo seç</div>
+    <div class="grid" id="avGrid"></div>
+    <button class="btn sm" onclick="rerollAv()">🎲 Yeni Logolar</button>
+    <button class="btn" onclick="saveProfile()">Profili Kaydet</button>
+    <div class="h">Şifre</div>
+    <input id="newPass" type="password" class="inp" placeholder="Yeni şifre (en az 6 karakter)">
+    <button class="btn" onclick="changePass()">Şifreyi Güncelle</button>
+    <button class="btn red" onclick="logout()">Oturumu Kapat</button>
+  </div>
+</div></div>
+
+<div class="modal" id="onM"><div class="mbox">
+  <div class="mhead">👥 Kullanıcılar</div>
+  <div class="mbody">
+    <div class="h">Çevrimiçi</div><div id="onL" style="display:flex;flex-direction:column;gap:4px"></div>
+    <div class="h">Çevrimdışı</div><div id="offL" style="display:flex;flex-direction:column;gap:4px"></div>
+  </div>
+</div></div>
+<!-- PROFİL -->
+<div class="modal" id="msgM"><div class="mbox">
+  <div class="mhead" id="msgMHead">Mesaj</div>
+  <div class="mbody">
+    <button class="btn" id="maEdit" onclick="startEdit()">✏️ Düzenle</button>
+    <button class="btn red" id="maDel" onclick="delFromMenu()">🗑️ Sil</button>
+    <button class="btn" style="background:var(--bg-card)" onclick="closeM('msgM')">Vazgeç</button>
+  </div>
+</div></div>
+<div class="modal" id="profM"><div class="mbox">
+  <div class="mhead">👤 Profil</div>
+  <div class="mbody" id="pfBody"></div>
+</div></div>
+
+<!-- GRUP OLUŞTUR -->
+<div class="modal" id="grM"><div class="mbox">
+  <div class="mhead">🧩 Yeni Grup</div>
+  <div class="mbody">
+    <div style="display:flex;gap:6px;align-items:center"><span id="grAv"></span><input id="grName" class="inp" style="margin:0" placeholder="Grup adı"></div>
+    <button class="btn sm" onclick="rerollGr()">🎲 Logo Değiştir</button>
+    <div class="h">Arkadaşlarını seç (en az 2 kişi, siz dahil 3 olmalı)</div>
+    <div id="grFriends" style="display:flex;flex-direction:column;gap:4px;max-height:120px;overflow-y:auto"></div>
+    <button class="btn" onclick="createGroup()">Grubu Oluştur</button>
+  </div>
+</div></div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, updatePassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getDatabase, ref, push, onValue, set, remove, update, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyDrr7d_enIeE1pOk-Ov_23TpwKEpDrHRdw",
+  authDomain: "saymodz-2d1ed.firebaseapp.com",
+  databaseURL: "https://saymodz-2d1ed-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "saymodz-2d1ed",
+  storageBucket: "saymodz-2d1ed.firebasestorage.app",
+  messagingSenderId: "203228147622",
+  appId: "1:203228147622:web:fb9101596485d2d3596967"
+});
+const auth = getAuth(app), db = getDatabase(app);
+
+const DEF_CH = { genel: { name: 'Sohbet', writeRole: 'all' }, duyurular: { name: 'Duyuru', writeRole: 'admin' } };
+const EMO = ['🦊','🐼','🐯','🦁','🐸','🐵','🐙','🦄','🐲','🦉','🐺','🐧','🦖','🤖','👾','🎮','⚡','🔥','💎','🌙','🚀','🎯','🍀','🌊'];
+const COL = ['#5c7cfa','#22c55e','#f97316','#e11d48','#a855f7','#06b6d4','#eab308','#64748b','#14b8a6','#ec4899'];
+
+const S = { me:null, my:{}, users:{}, online:{}, chans:{}, groups:{}, style:{}, friends:{}, inReq:{}, outReq:{}, gIds:{},
+  view:null, subs:[], mdata:{}, list:[], reply:null, lastMsgTime:0, lastCount:null, startedAt:Date.now(), lastNotice:null, opts:[], setAv:null, grAv:null, edit:null, act:null };
+let isReg = false, started = false;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rnd = a => a[Math.floor(Math.random() * a.length)];
+const randAv = () => ({ e: rnd(EMO), c: rnd(COL) });
+const av = (a, s = 20) => { a = a || { e: '👤', c: '#3b404d' }; return `<span class="av" style="width:${s}px;height:${s}px;background:${a.c};font-size:${Math.round(s * .55)}px">${a.e}</span>`; };
+const uname = uid => S.users[uid]?.username || '?';
+const ROLE = uid => S.users[uid]?.role || 'user';
+const on = (p, cb) => onValue(ref(db, p), s => cb(s.val()));
+const openM = id => $(id).classList.add('on');
+window.closeM = id => $(id).classList.remove('on');
+window.openOnline = () => { renderOnline(); openM('onM'); };
+function nameColor(uid) {
+  if (ROLE(uid) === 'admin') return S.style.adminColor || '#ffd700';
+  return S.users[uid]?.color || '#5c7cfa';
+}
+function allChans() { return { ...DEF_CH, ...S.chans }; }
+function canWriteChan(k) {
+  const c = allChans()[k]; if (!c) return false;
+  if (S.my.role === 'admin') return true;
+  if (k === 'duyurular') return false;
+  const wr = c.writeRole || 'all';
+  return wr === 'all' || wr === S.my.role;
+}
+function dmPath(o) { const [a, b] = [S.me.uid, o].sort(); return `dmMessages/${a}/${b}`; }
+function restrictText() {
+  if (S.my.isBanned) return 'Hesabınız banlı olduğu için mesaj gönderemezsiniz.';
+  const t = S.my.timeoutUntil || 0;
+  if (t > Date.now()) return `Zaman aşımındasınız (${Math.ceil((t - Date.now()) / 60000)} dk kaldı). ${S.my.timeoutMessage || ''}`;
+  return '';
+}
+function applyRestrict() {
+  const r = restrictText(), c = $('cin');
+  if (c) { c.disabled = !!r; c.placeholder = r || 'Mesaj...'; }
+}
+function playSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(587.33, ctx.currentTime); o.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + .1);
+    g.gain.setValueAtTime(.1, ctx.currentTime); g.gain.exponentialRampToValueAtTime(.01, ctx.currentTime + .1);
+    o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + .1);
+  } catch (e) {}
+}
+function showBan(msg) {
+  $('banScr').innerHTML = `<div class="box" style="max-width:220px"><div class="t" style="color:var(--danger)">Erişim Engellendi</div><div class="sub" style="margin:8px 0">${esc(msg)}</div><button class="btn" onclick="logout()">Çıkış Yap</button></div>`;
+  $('banScr').classList.add('on');
+}
+function showNotice(n) {
+  const t = $('toast');
+  t.innerText = '📢 ' + n.text; t.style.background = n.color || 'var(--accent)';
+  t.classList.add('on'); if (n.sound) playSound();
+  setTimeout(() => t.classList.remove('on'), 6000);
+}
+function applyStyle() {
+  const st = document.documentElement.style;
+  if (S.style.accent) st.setProperty('--accent', S.style.accent);
+  if (S.style.adminColor) st.setProperty('--admin-color', S.style.adminColor);
+}
+
+// ---------- GİRİŞ ----------
+const USER_RE = /^[A-Za-z0-9]+$/;
+function setErr(errId, msg) { const e = $(errId); e.textContent = msg || ''; e.classList.toggle('on', !!msg); }
+function setFieldErr(inpId, errId, msg) { $(inpId).classList.toggle('bad', !!msg); setErr(errId, msg); }
+window.clrErr = (inpId, errId) => setFieldErr(inpId, errId, '');
+function clearAuthErr() { setFieldErr('authU', 'uErr', ''); setFieldErr('authP', 'pErr', ''); setErr('gErr', ''); }
+function validateAuth(u, p) {
+  let uMsg = '', pMsg = '';
+  if (!u) uMsg = 'Kullanıcı adı boş bırakılamaz';
+  else if (isReg && !USER_RE.test(u)) uMsg = 'Kullanıcı adında sembol, boşluk veya Türkçe harf kullanılamaz (sadece a-z ve 0-9)';
+  else if (isReg && (u.length < 3 || u.length > 20)) uMsg = 'Kullanıcı adı 3-20 karakter olmalı';
+  if (!p) pMsg = 'Şifre boş bırakılamaz';
+  else if (isReg && p.length < 6) pMsg = 'Şifre en az 6 karakter olmalı';
+  setFieldErr('authU', 'uErr', uMsg);
+  setFieldErr('authP', 'pErr', pMsg);
+  return !uMsg && !pMsg;
+}
+const emailOf = u => u.toLowerCase().replace(/[^a-z0-9]/g, '') + '@saymodz.chat';
+const savedU = localStorage.getItem('saymodz_saved_user');
+if (savedU) { $('normBox').style.display = 'none'; $('autoBox').style.display = 'block'; $('autoUser').innerText = '@' + savedU; }
+window.confirmAuto = () => {
+  const p = localStorage.getItem('saymodz_saved_pass');
+  if (savedU && p) { normalLogin(); $('authU').value = savedU; $('authP').value = p; handleAuth(); }
+  else normalLogin();
+};
+window.normalLogin = () => { $('autoBox').style.display = 'none'; $('normBox').style.display = 'block'; };
+window.toggleReg = () => {
+  isReg = !isReg; clearAuthErr();
+  $('authSub').innerText = isReg ? 'Kayıt Ol' : 'Giriş Yap';
+  $('authBtn').innerText = isReg ? 'Kayıt Ol' : 'Giriş Yap';
+  $('toggleTxt').innerHTML = isReg ? 'Hesabın var mı? <span>Giriş Yap</span>' : 'Hesabın yok mu? <span>Kayıt Ol</span>';
+};
+window.handleAuth = async () => {
+  const u = $('authU').value.trim(), p = $('authP').value.trim();
+  clearAuthErr();
+  if (!validateAuth(u, p)) return;
+  const b = $('authBtn'); b.disabled = true;
+  try {
+    const email = emailOf(u);
+    if (isReg) {
+      const c = await createUserWithEmailAndPassword(auth, email, p);
+      await updateProfile(c.user, { displayName: u });
+      await set(ref(db, 'users/' + c.user.uid), { username: u, email, role: 'user', color: rnd(COL), avatar: randAv(), isBanned: false, createdAt: Date.now() });
+    } else {
+      await signInWithEmailAndPassword(auth, email, p);
+    }
+    localStorage.setItem('saymodz_saved_user', u);
+    localStorage.setItem('saymodz_saved_pass', p);
+  } catch (e) {
+    const c = e.code || '';
+    if (c === 'auth/email-already-in-use') setFieldErr('authU', 'uErr', 'Bu kullanıcı adı zaten alınmış');
+    else if (['auth/invalid-credential', 'auth/invalid-login-credentials', 'auth/wrong-password', 'auth/user-not-found'].includes(c)) setFieldErr('authP', 'pErr', 'Kullanıcı adı veya şifre hatalı');
+    else if (c === 'auth/weak-password') setFieldErr('authP', 'pErr', 'Şifre en az 6 karakter olmalı');
+    else if (c === 'auth/too-many-requests') setErr('gErr', 'Çok fazla deneme yapıldı, lütfen biraz bekleyin');
+    else if (c === 'auth/network-request-failed') setErr('gErr', 'İnternet bağlantısı yok');
+    else setErr('gErr', 'Hata: ' + e.message);
+  } finally { b.disabled = false; }
+};
+window.logout = async () => {
+  if (S.me) await remove(ref(db, 'online/' + S.me.uid)).catch(() => {});
+  localStorage.removeItem('saymodz_saved_user');
+  localStorage.removeItem('saymodz_saved_pass');
+  await signOut(auth);
+  location.reload();
+};
+
+onAuthStateChanged(auth, user => {
+  if (!user) { $('auth').style.display = 'flex'; return; }
+  S.me = user;
+  $('auth').style.display = 'none';
+  if (!started) startApp();
+});
+
+// ---------- BAŞLATMA & DİNLEYİCİLER ----------
+function startApp() {
+  started = true;
+  const uid = S.me.uid;
+  set(ref(db, 'online/' + uid), { onlineAt: Date.now() }).catch(() => {});
+  onDisconnect(ref(db, 'online/' + uid)).remove();
+
+  onValue(ref(db, 'users/' + uid), s => {
+    S.my = s.val() || {};
+    if (S.my.isBanned) return showBan(S.my.banMessage || 'Hesabınız banlanmıştır.');
+    applyRestrict();
+  });
+  on('users', v => { S.users = v || {}; refresh(); });
+  on('online', v => { S.online = v || {}; refresh(); });
+  on('channels', v => { S.chans = v || {}; refresh(); });
+  on('groups', v => { S.groups = v || {}; refresh(); });
+  on('system/style', v => { S.style = v || {}; applyStyle(); refresh(); });
+  on('system/slow', v => { S.slow = v || {}; });
+  on('system/notice', v => {
+    if (!v || !v.time) return;
+    if (v.time > S.startedAt && v.id !== S.lastNotice) { S.lastNotice = v.id; showNotice(v); }
+    else S.lastNotice = v.id;
+  });
+  on('friends/' + uid, v => { S.friends = v || {}; refresh(); });
+  on('friendRequests/' + uid, v => { S.inReq = v || {}; refresh(); });
+  on('outgoing/' + uid, v => { S.outReq = v || {}; refresh(); });
+  on('userGroups/' + uid, v => { S.gIds = v || {}; refresh(); });
+  let sysCount = null;
+  on('systemDm/' + uid, v => {
+    const n = Object.keys(v || {}).length;
+    if (sysCount !== null && n > sysCount) {
+      if (S.view?.kind === 'sys') $('d-dm').classList.remove('on');
+      else $('d-dm').classList.add('on');
+      showNotice({ text: 'Sistemden yeni bir mesaj var', color: '#5c7cfa', sound: true });
+    }
+    sysCount = n;
+  });
+  setInterval(applyRestrict, 15000);
+  go('chan', 'genel');
+}
+
+function refresh() {
+  $('d-fr').classList.toggle('on', Object.keys(S.inReq).length > 0);
+  renderOnline();
+  const k = S.view?.kind;
+  if (k === 'friends') renderFriends();
+  else if (k === 'dmlist') renderDmList();
+  else if (k === 'grlist') renderGroups();
+  else if (S.view?.t) drawMsgs();
+  applyRestrict();
+}
+function renderOnline() {
+  const all = Object.keys(S.users), on = all.filter(u => S.online[u]), off = all.filter(u => !S.online[u]);
+  $('cnt').innerText = `👥 ${on.length}/${all.length}`;
+  const li = u => `<div class="row" onclick="closeM('onM');openProfile('${u}')">${av(S.users[u]?.avatar, 16)}<span class="grow">${esc(uname(u))}</span></div>`;
+  const onH = on.map(li).join('') || '<div class="h">Kimse çevrimiçi değil</div>';
+  const offH = off.map(li).join('') || '<div class="h">Yok</div>';
+  $('onL').innerHTML = onH; $('offL').innerHTML = offH;
+  $('pOn').innerHTML = onH; $('pOff').innerHTML = offH;
+}
+function clearSubs() { S.subs.forEach(f => f()); S.subs = []; }
+
+// ---------- SAYFA YÖNLENDİRME ----------
+window.go = (kind, key) => {
+  clearSubs();
+  S.view = { kind, key }; S.lastCount = null;
+  const tab = { chan: key === 'duyurular' ? 't-ann' : 't-chat', dm: 't-dm', sys: 't-dm', dmlist: 't-dm', friends: 't-fr', grlist: 't-gr', grp: 't-gr' }[kind];
+  document.querySelectorAll('.si').forEach(e => e.classList.remove('active'));
+  if (tab) $(tab).classList.add('active');
+  if (kind === 'dmlist' || kind === 'sys') $('d-dm').classList.remove('on');
+
+  if (kind === 'friends') {
+    $('title').innerText = '👥 Arkadaşlar';
+    $('content').innerHTML = '<div class="bar" style="border-bottom:1px solid var(--border)"><input id="addU" class="inp" style="margin:0" placeholder="Kullanıcı adını yaz" oninput="findUser()"><button class="btn sm" onclick="addByName()">➕ Ekle</button></div><div id="found" style="padding:4px"></div><div class="chips"><input id="fq" class="inp" style="margin:0" placeholder="Arkadaşlarında ara..." oninput="renderFriends()"></div><div class="scroll" id="flist"></div>';
+    renderFriends();
+  } else if (kind === 'dmlist') {
+    $('title').innerText = '✉️ Mesajlar';
+    $('content').innerHTML = '<div class="scroll" id="flist"></div>';
+    renderDmList();
+  } else if (kind === 'grlist') {
+    $('title').innerText = '🧩 Gruplar';
+    $('content').innerHTML = '<div class="scroll" id="flist"></div>';
+    renderGroups();
+  } else openThread(kind, key);
+};
+
+// ---------- ARKADAŞLAR ----------
+window.renderFriends = () => {
+  const q = ($('fq')?.value || '').toLowerCase(), me = S.me.uid;
+  const f = ids => ids.filter(u => u !== me && uname(u).toLowerCase().includes(q));
+  const row = (u, btns) => `<div class="row" onclick="openProfile('${u}')">${av(S.users[u]?.avatar, 22)}<span class="grow" style="color:${nameColor(u)}">${esc(uname(u))}</span>${btns}</div>`;
+  const inc = f(Object.keys(S.inReq)), out = f(Object.keys(S.outReq)), fr = f(Object.keys(S.friends));
+  let h = '';
+  if (inc.length) h += '<div class="h">📥 Gelen İstekler</div>' + inc.map(u => row(u, `<button class="btn sm" onclick="event.stopPropagation();acceptReq('${u}')">Kabul</button><button class="btn sm red" onclick="event.stopPropagation();declineReq('${u}')">Reddet</button>`)).join('');
+  if (out.length) h += '<div class="h">📤 Giden İstekler</div>' + out.map(u => row(u, `<button class="btn sm" onclick="event.stopPropagation();cancelOut('${u}')">İptal</button>`)).join('');
+  h += `<div class="h">🤝 Arkadaşlar (${fr.length})</div>` + (fr.map(u => row(u, `<button class="btn sm" onclick="event.stopPropagation();go('dm','${u}')">✉️</button>`)).join('') || '<div class="h">Henüz arkadaşınız yok</div>');
+  $('flist').innerHTML = h;
+};
+window.addFriend = async u => {
+  try {
+    await set(ref(db, `friendRequests/${u}/${S.me.uid}`), { time: Date.now() });
+    await set(ref(db, `outgoing/${S.me.uid}/${u}`), true);
+  } catch (e) { alert('İstek gönderilemedi: ' + e.message); }
+};
+window.findUser = () => {
+  const n = ($('addU').value || '').trim().toLowerCase(), box = $('found');
+  if (!n) { box.innerHTML = ''; return; }
+  const ids = Object.keys(S.users).filter(k => k !== S.me.uid && (S.users[k].username || '').toLowerCase().startsWith(n)).slice(0, 5);
+  box.innerHTML = ids.length ? ids.map(u => {
+    const act = S.friends[u] ? '✔ Arkadaş' : S.outReq[u] ? 'İstek gönderildi' : S.inReq[u] ? 'Kabul et' : '➕ Ekle';
+    const click = S.friends[u] || S.outReq[u] ? '' : S.inReq[u] ? `acceptReq('${u}')` : `addFriend('${u}')`;
+    return `<div class="row" onclick="${click}">${av(S.users[u].avatar, 22)}<span class="grow">${esc(uname(u))}</span>${act}</div>`;
+  }).join('') : '<div class="h">Kullanıcı yok</div>';
+};
+window.mentionHint = () => {
+  const m = $('cin').value.match(/@([^\s@]*)$/), box = $('mlist');
+  if (!m) { box.style.display = 'none'; return; }
+  const q = m[1].toLowerCase();
+  const ids = Object.keys(S.users).filter(k => k !== S.me.uid && (S.users[k].username || '').toLowerCase().startsWith(q)).slice(0, 6);
+  box.style.display = ids.length ? 'flex' : 'none';
+  box.innerHTML = ids.map(u => `<span class="chip" onclick="pickMention('${u}')">@${esc(uname(u))}</span>`).join('');
+};
+window.pickMention = u => {
+  const i = $('cin'); i.value = i.value.replace(/@[^\s@]*$/, '@' + uname(u) + ' ');
+  $('mlist').style.display = 'none'; i.focus();
+};
+window.addByName = async () => {
+  const inp = $('addU'), n = (inp?.value || '').trim().toLowerCase();
+  if (!n) return;
+  inp.value = '';
+  const uid = Object.keys(S.users).find(k => (S.users[k].username || '').toLowerCase() === n);
+  if (!uid) return alert('Bu kullanıcı adıyla kayıtlı biri bulunamadı.');
+  if (uid === S.me.uid) return alert('Kendinize istek gönderemezsiniz.');
+  if (S.friends[uid]) return alert('Bu kişi zaten arkadaşınız.');
+  if (S.inReq[uid]) return acceptReq(uid);
+  if (S.outReq[uid]) return alert('Bu kişiye zaten istek gönderdiniz.');
+  addFriend(uid);
+};
+window.cancelOut = async u => {
+  await remove(ref(db, `friendRequests/${u}/${S.me.uid}`)).catch(() => {});
+  await remove(ref(db, `outgoing/${S.me.uid}/${u}`)).catch(() => {});
+};
+window.acceptReq = async u => {
+  try {
+    const t = Date.now();
+    await set(ref(db, `friends/${S.me.uid}/${u}`), { since: t });
+    await set(ref(db, `friends/${u}/${S.me.uid}`), { since: t });
+    await remove(ref(db, `friendRequests/${S.me.uid}/${u}`));
+    await remove(ref(db, `outgoing/${u}/${S.me.uid}`));
+  } catch (e) { alert('Hata: ' + e.message); }
+};
+window.declineReq = async u => {
+  await remove(ref(db, `friendRequests/${S.me.uid}/${u}`)).catch(() => {});
+  await remove(ref(db, `outgoing/${u}/${S.me.uid}`)).catch(() => {});
+};
+window.unfriend = async u => {
+  if (!confirm('Arkadaşlıktan çıkarılsın mı?')) return;
+  await remove(ref(db, `friends/${S.me.uid}/${u}`)).catch(() => {});
+  await remove(ref(db, `friends/${u}/${S.me.uid}`)).catch(() => {});
+};
+function renderDmList() {
+  const fr = Object.keys(S.friends).sort((a, b) => uname(a).localeCompare(uname(b)));
+  $('flist').innerHTML = '<div class="row" onclick="go(\'sys\')">📨 <span class="grow">Sistem Bildirimleri</span></div>' +
+    (fr.length ? '<div class="h">Arkadaşlar</div>' + fr.map(u => `<div class="row" onclick="go('dm','${u}')">${av(S.users[u]?.avatar, 22)}<span class="grow" style="color:${nameColor(u)}">${esc(uname(u))}</span>✉️</div>`).join('')
+               : '<div class="h">Mesaj atmak için önce arkadaş ekleyin</div>');
+}
+
+// ---------- PROFİL ----------
+window.openProfile = u => {
+  const usr = S.users[u]; if (!usr) return;
+  const me = u === S.me.uid;
+  let b = '';
+  if (me) b = `<button class="btn" onclick="closeM('profM');openSettings()">Ayarlar</button>`;
+  else {
+    if (S.friends[u]) b += `<button class="btn" onclick="closeM('profM');go('dm','${u}')">✉️ Mesaj Gönder</button><button class="btn red" onclick="closeM('profM');unfriend('${u}')">Arkadaşlıktan Çıkar</button>`;
+    else if (S.inReq[u]) b += `<button class="btn" onclick="closeM('profM');acceptReq('${u}')">Kabul Et</button><button class="btn red" onclick="closeM('profM');declineReq('${u}')">Reddet</button>`;
+    else if (S.outReq[u]) b += `<button class="btn" onclick="closeM('profM');cancelOut('${u}')">İsteği İptal Et</button>`;
+    else b += `<button class="btn" onclick="closeM('profM');addFriend('${u}')">➕ Arkadaş Ekle</button>`;
+    b += `<button class="btn red" onclick="closeM('profM');reportUser('${u}')">⚑ Şikayet Et</button>`;
+  }
+  $('pfBody').innerHTML = `<div style="text-align:center">${av(usr.avatar, 48)}<div style="font-size:10px;font-weight:bold;margin-top:4px;color:${nameColor(u)}">${esc(usr.username)}</div><div class="h">${usr.role === 'admin' ? '👑 Yönetici' : 'Kullanıcı'}</div></div>${b}`;
+  openM('profM');
+};
+window.reportUser = async u => {
+  const why = prompt('Şikayet sebebi nedir?'); if (!why || !why.trim()) return;
+  try {
+    await push(ref(db, 'reports'), { reporter: S.me.uid, reporterName: S.my.username || '', reportedUid: u, reportedName: uname(u), text: '(profil şikayeti)', reason: why.trim().slice(0, 200), time: Date.now() });
+    alert('Şikayetiniz yöneticilere iletildi.');
+  } catch (e) { alert('Hata: ' + e.message); }
+};
+
+// ---------- SOHBET ----------
+function thread(kind, key) {
+  if (kind === 'chan') {
+    if (!allChans()[key]) return null;
+    return { title: allChans()[key].name, paths: ['channelMessages/' + key], write: 'channelMessages/' + key, readonly: !canWriteChan(key), receipts: false };
+  }
+  if (kind === 'dm') { if (!key) return null; const p = dmPath(key); return { title: '✉️ ' + uname(key), paths: [p], write: p, readonly: false, receipts: true }; }
+  if (kind === 'grp') { if (!S.groups[key]) return null; return { title: '🧩 ' + S.groups[key].name, paths: ['groupMessages/' + key], write: 'groupMessages/' + key, readonly: false, receipts: true }; }
+  if (kind === 'sys') return { title: '📨 Sistem', paths: ['systemDm/' + S.me.uid], write: null, readonly: true, receipts: false };
+  return null;
+}
+function openThread(kind, key) {
+  const t = thread(kind, key);
+  if (!t) { $('content').innerHTML = '<div class="h" style="padding:10px">Bu sohbet bulunamadı.</div>'; return; }
+  S.view = { kind, key, t }; S.list = []; S.mdata = {}; S.lastCount = null; S.reply = null; S.edit = null;
+  $('title').innerText = t.title;
+  const chips = '';
+  const bar = t.readonly
+    ? '<span class="h" style="width:100%;text-align:center;margin:0">Bu kanala mesaj atılmaz</span>'
+    : `<input id="cin" class="inp" style="margin:0" placeholder="Mesaj..." oninput="mentionHint()" onkeydown="if(event.key==='Enter')sendMsg()"><button class="btn" style="width:24px;height:20px;padding:0" onclick="sendMsg()">➤</button>`;
+  $('content').innerHTML = `${chips}<div class="scroll" id="msgs"></div><div class="chips" id="mlist" style="display:none"></div><div class="reply" id="rbar"><span id="rtxt"></span><span class="act" onclick="cancelReply()">İptal</span></div><div class="reply" id="ebar"><span id="etxt"></span><span class="act" onclick="cancelEdit()">İptal</span></div><div class="bar">${bar}</div>`;
+  t.paths.forEach(p => S.subs.push(onValue(ref(db, p), s => { S.mdata[p] = s.val() || {}; drawMsgs(); },
+    () => { if ($('msgs')) $('msgs').innerHTML = '<div class="h" style="text-align:center;margin-top:20px">Bu sohbeti görüntüleme yetkiniz yok.</div>'; })));
+  applyRestrict();
+}
+function drawMsgs() {
+  const el = $('msgs'); if (!el || !S.view?.t) return;
+  const t = S.view.t, list = [];
+  Object.entries(S.mdata).forEach(([p, o]) => Object.entries(o || {}).forEach(([id, m]) => { if (m && m.time) list.push({ ...m, id, path: p }); }));
+  list.sort((a, b) => a.time - b.time);
+  S.list = list;
+  const bottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 30;
+  el.innerHTML = list.length ? list.map((m, i) => msgHtml(m, i, t)).join('') : '<div class="h" style="text-align:center;margin-top:20px">Henüz mesaj yok</div>';
+  if (bottom || S.lastCount === null) el.scrollTop = el.scrollHeight;
+  if (t.receipts) list.forEach(m => {
+    if (m.senderUid !== S.me.uid && !(m.seenBy && m.seenBy[S.me.uid]))
+      update(ref(db, m.path + '/' + m.id + '/seenBy'), { [S.me.uid]: true }).catch(() => {});
+  });
+  if (S.lastCount !== null && list.length > S.lastCount && list[list.length - 1].senderUid !== S.me.uid) playSound();
+  S.lastCount = list.length;
+}
+function msgHtml(m, i, t) {
+  const mine = m.senderUid === S.me.uid, adm = ROLE(m.senderUid) === 'admin' || !!m.isSystem;
+  let tick = '';
+  if (t.receipts && mine) {
+    const seen = m.seenBy && Object.keys(m.seenBy).some(k => k !== S.me.uid);
+    tick = `<span class="tick ${seen ? 'seen' : ''}">${seen ? '✓✓' : '✓'}</span>`;
+  }
+  const rep = (!mine && t.receipts) ? `<span class="act" onclick="reportMsg(${i})">⚑</span>` : '';
+  const ed = m.edited ? '<span class="ed">düzenlendi</span>' : '';
+  return `<div class="msg ${mine ? 'me' : ''} ${adm ? 'adm' : ''}" data-i="${i}" data-p="${m.path}" data-id="${m.id}">
+    ${m.replyTo ? `<div class="rp"><b>${esc(m.replyTo.sender)}:</b> ${esc(m.replyTo.text)}</div>` : ''}
+    <div class="hd"><span class="nm" style="color:${nameColor(m.senderUid)}" onclick="openProfile('${m.senderUid}')">${av(S.users[m.senderUid]?.avatar, 12)}${adm ? '👑 ' : ''}${esc(m.sender)}</span><span class="tm">${new Date(m.time).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}${tick}</span></div>
+    <div class="tx" style="${adm ? 'color:' + (S.style.adminColor || '#ffd700') : ''}">${esc(m.text)}</div>
+    <div style="text-align:right">${ed}${rep}</div></div>`;
+}
+window.sendMsg = async () => {
+  const t = S.view?.t; if (!t || t.readonly || !t.write) return;
+  const r = restrictText(); if (r) return alert(r);
+  const inp = $('cin'); if (!inp) return;
+  const text = inp.value.trim().slice(0, 500); if (!text) return;
+  if (S.edit) return saveEdit(text);
+  if (t.write === 'channelMessages/genel' && S.slow?.enabled && S.my.role !== 'admin') {
+    const last = S.list.filter(m => m.senderUid === S.me.uid).pop();
+    const wait = last ? (S.slow.seconds || 10) * 1000 - (Date.now() - last.time) : 0;
+    if (wait > 0) return alert(`Yavaş mod açık. ${Math.ceil(wait / 1000)} saniye sonra tekrar yazabilirsiniz.`);
+  }
+  const now = Date.now();
+  if (now - S.lastMsgTime < 2000) return alert('Lütfen mesaj atmak için 2 saniye bekleyin!');
+  S.lastMsgTime = now;
+  const mentions = {};
+  (text.match(/@[^\s@]+/g) || []).forEach(tag => {
+    const n = tag.slice(1).toLowerCase();
+    const uid = Object.keys(S.users).find(k => (S.users[k].username || '').toLowerCase() === n);
+    if (uid) mentions[uid] = true;
+  });
+  try {
+    await push(ref(db, t.write), {
+      senderUid: S.me.uid, sender: S.my.username || S.me.displayName || 'Kullanıcı', text, time: now,
+      mentions: Object.keys(mentions).length ? mentions : null,
+      replyTo: S.reply ? { sender: S.reply.sender, text: S.reply.text.slice(0, 80) } : null
+    });
+    inp.value = ''; cancelReply();
+  } catch (e) { alert('Mesaj gönderilemedi: ' + e.message); }
+};
+window.cancelReply = () => { S.reply = null; $('rbar')?.classList.remove('on'); };
+window.openMsgMenu = (path, id) => {
+  const m = S.list.find(x => x.path === path && x.id === id); if (!m) return;
+  const mine = m.senderUid === S.me.uid, canDel = mine || S.my.role === 'admin';
+  if (!mine && !canDel) return;
+  S.act = { path, id, text: m.text };
+  $('msgMHead').innerText = mine ? '💬 Mesajım' : '💬 ' + m.sender;
+  $('maEdit').style.display = mine ? '' : 'none';
+  $('maDel').style.display = canDel ? '' : 'none';
+  openM('msgM');
+};
+window.startEdit = () => {
+  const a = S.act; closeM('msgM'); if (!a) return;
+  const inp = $('cin'); if (!inp) return;
+  cancelReply();
+  S.edit = { path: a.path, id: a.id };
+  inp.value = a.text; inp.focus();
+  $('etxt').innerText = '✏️ Mesaj düzenleniyor';
+  $('ebar').classList.add('on');
+};
+window.cancelEdit = () => {
+  S.edit = null; $('ebar')?.classList.remove('on');
+  const i = $('cin'); if (i) i.value = '';
+};
+async function saveEdit(text) {
+  const e = S.edit;
+  if (!S.list.some(m => m.path === e.path && m.id === e.id)) { alert('Bu mesaj artık mevcut değil.'); return cancelEdit(); }
+  try {
+    await update(ref(db, e.path + '/' + e.id), { text, edited: true, editedAt: Date.now() });
+    cancelEdit();
+  } catch (err) { alert('Mesaj düzenlenemedi: ' + err.message); }
+}
+window.delFromMenu = async () => {
+  const a = S.act; closeM('msgM'); if (!a) return;
+  if (!confirm('Mesaj silinsin mi?')) return;
+  try {
+    await remove(ref(db, a.path + '/' + a.id));
+    if (S.edit && S.edit.id === a.id) cancelEdit();
+  } catch (e) { alert('Mesaj silinemedi: ' + e.message); }
+};
+window.reportMsg = async i => {
+  const m = S.list[i]; if (!m) return;
+  const why = prompt('Şikayet sebebi nedir?'); if (!why || !why.trim()) return;
+  try {
+    await push(ref(db, 'reports'), { reporter: S.me.uid, reporterName: S.my.username || '', reportedUid: m.senderUid, reportedName: m.sender, text: m.text, reason: why.trim().slice(0, 200), time: Date.now() });
+    alert('Şikayetiniz yöneticilere iletildi.');
+  } catch (e) { alert('Hata: ' + e.message); }
+};
+// Sağa kaydırarak yanıtla
+let swX = 0, swY = 0, swEl = null, lpTimer = null;
+$('content').addEventListener('touchstart', e => {
+  swEl = e.target.closest?.('.msg') || null; swX = e.touches[0].clientX; swY = e.touches[0].clientY;
+  if (swEl) swEl.style.transition = 'none';
+  lpStart(swEl);
+}, { passive: true });
+$('content').addEventListener('touchmove', e => {
+  if (!swEl) return;
+  const mx = e.touches[0].clientX - swX, my = e.touches[0].clientY - swY;
+  if (Math.abs(mx) > 8 || Math.abs(my) > 8) lpCancel();
+  const dx = Math.max(0, Math.min(80, mx));
+  swEl.style.transform = `translateX(${dx}px)`;
+}, { passive: true });
+$('content').addEventListener('touchend', e => {
+  lpCancel();
+  const el = swEl; swEl = null; if (!el) return;
+  const dx = e.changedTouches[0].clientX - swX;
+  el.style.transition = 'transform .2s ease-out'; el.style.transform = 'translateX(0)';
+  if (dx > 50 && S.view?.t?.write) {
+    if (S.edit) cancelEdit();
+    S.reply = S.list[+el.dataset.i];
+    $('rtxt').innerText = '↩ ' + S.reply.sender + ': ' + S.reply.text.slice(0, 30);
+    $('rbar').classList.add('on');
+  }
+});
+
+// Basılı tutarak menü (düzenle / sil)
+function lpCancel() { clearTimeout(lpTimer); lpTimer = null; }
+function lpStart(el) {
+  lpCancel();
+  if (!el || !el.dataset.id) return;
+  const p = el.dataset.p, id = el.dataset.id;
+  lpTimer = setTimeout(() => { lpTimer = null; if (navigator.vibrate) navigator.vibrate(15); openMsgMenu(p, id); }, 450);
+}
+$('content').addEventListener('mousedown', e => { if (e.button === 0) lpStart(e.target.closest?.('.msg') || null); });
+$('content').addEventListener('mouseup', lpCancel);
+$('content').addEventListener('mouseleave', lpCancel);
+$('content').addEventListener('contextmenu', e => { if (e.target.closest?.('.msg')) e.preventDefault(); });
+
+// ---------- GRUPLAR ----------
+function renderGroups() {
+  const ids = Object.keys(S.gIds || {}).filter(g => S.groups[g]);
+  $('flist').innerHTML = '<button class="btn" onclick="openGroupMaker()">➕ Yeni Grup Oluştur</button>' +
+    (ids.length ? ids.map(g => `<div class="row" onclick="go('grp','${g}')">${av(S.groups[g].avatar, 22)}<span class="grow">${esc(S.groups[g].name)}</span>🧩</div>`).join('')
+                : '<div class="h">Henüz grubunuz yok</div>');
+}
+window.openGroupMaker = () => {
+  $('grName').value = '';
+  $('grFriends').innerHTML = Object.keys(S.friends).map(u =>
+    `<label class="row"><input type="checkbox" value="${u}"> ${av(S.users[u]?.avatar, 16)} ${esc(uname(u))}</label>`).join('') || '<div class="h">Önce arkadaş ekleyin</div>';
+  rerollGr(); openM('grM');
+};
+window.rerollGr = () => { S.grAv = randAv(); $('grAv').innerHTML = av(S.grAv, 34); };
+window.createGroup = async () => {
+  const name = $('grName').value.trim().slice(0, 30);
+  if (!name) return alert('Grup adı girin!');
+  const members = { [S.me.uid]: true };
+  document.querySelectorAll('#grFriends input:checked').forEach(c => members[c.value] = true);
+  if (Object.keys(members).length < 3) return alert('Grup için en az 3 kişi gerekir (siz dahil). Daha fazla arkadaş seçin.');
+  try {
+    const gRef = push(ref(db, 'groups'));
+    await set(gRef, { name, avatar: S.grAv, owner: S.me.uid, members, memberCount: Object.keys(members).length, createdAt: Date.now() });
+    await Promise.all(Object.keys(members).map(u => set(ref(db, `userGroups/${u}/${gRef.key}`), true)));
+    closeM('grM');
+    go('grp', gRef.key);
+  } catch (e) { alert('Grup oluşturulamadı: ' + e.message); }
+};
+
+// ---------- AYARLAR ----------
+function drawGrid() {
+  $('avGrid').innerHTML = S.opts.map((o, i) => `<div class="av ${o === S.setAv ? 'sel' : ''}" style="background:${o.c}" onclick="pickAv(${i})">${o.e}</div>`).join('');
+}
+window.pickAv = i => { S.setAv = S.opts[i]; drawGrid(); };
+window.rerollAv = () => { S.opts = Array.from({ length: 12 }, randAv); S.setAv = S.opts[0]; drawGrid(); };
+window.openSettings = () => {
+  S.opts = [S.my.avatar || randAv()];
+  while (S.opts.length < 12) S.opts.push(randAv());
+  S.setAv = S.opts[0];
+  drawGrid();
+
+  $('setName').innerHTML = `@${esc(S.my.username || S.me.displayName)}`;
+  openM('setM');
+};
+window.saveProfile = async () => {
+  try {
+    await set(ref(db, `users/${S.me.uid}/avatar`), S.setAv);
+    alert('Profil kaydedildi!');
+  } catch (e) { alert('Hata: ' + e.message); }
+};
+window.changePass = async () => {
+  const p = $('newPass').value.trim();
+  if (p.length < 6) return alert('Şifre en az 6 karakter olmalıdır!');
+  try {
+    await updatePassword(S.me, p);
+    localStorage.setItem('saymodz_saved_pass', p);
+    $('newPass').value = '';
+    alert('Şifreniz güncellendi!');
+  } catch (e) { alert('Şifre güncellenemedi (tekrar giriş yapmanız gerekebilir): ' + e.message); }
+};
+
+// ---------- BAŞLANGIÇ ----------
+document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('on'); }));
+</script>
+</body>
+</html>
