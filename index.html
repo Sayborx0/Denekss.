@@ -75,13 +75,16 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-dark);color
 .msg{-webkit-touch-callout:none}
 .content{min-width:0}
 .body{flex:1;display:flex;min-height:0;min-width:0}
-.tl{display:flex;align-items:center;gap:8px;min-width:0}
-.uside{display:none;width:100px;flex-shrink:0;margin:6px 6px 6px 8px;background:var(--bg-panel);border:1px solid var(--border);border-radius:4px;flex-direction:column;overflow:hidden;min-height:0}
-.uside.on{display:flex}
+.uside{width:100px;flex-shrink:0;margin:6px 6px 6px 8px;background:var(--bg-panel);border:1px solid var(--border);border-radius:4px;display:flex;flex-direction:column;overflow:hidden;min-height:0}
 .uhd{font-size:8.5px;font-weight:bold;padding:4px 5px;border-bottom:1px solid var(--border);white-space:nowrap}
 .uscroll{flex:1;overflow-y:auto;padding:4px;display:flex;flex-direction:column;gap:4px;min-height:0}
 .uscroll .row{padding:3px}
 @media (max-width:420px){.uside{width:78px;margin-left:6px}}
+.rxpick{display:flex;gap:4px;justify-content:space-between;margin-bottom:4px}
+.rxb{background:var(--bg-card);border:1px solid var(--border);font-size:14px;padding:4px 0;flex:1;margin:0;cursor:pointer;border-radius:4px;color:#fff}
+.rxs{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px}
+.rxc{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:1px 5px;font-size:8px;cursor:pointer;color:var(--text)}
+.rxc.on{border-color:var(--accent);background:rgba(92,124,250,.25)}
 ::-webkit-scrollbar{width:2px}::-webkit-scrollbar-thumb{background:var(--border)}
 </style>
 </head>
@@ -125,10 +128,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-dark);color
 
 <!-- ANA ALAN -->
 <div class="main">
-  <div class="top"><div class="tl"><b id="title">💬 Genel</b><span class="act" id="cnt" onclick="toggleUsers()" style="font-size:9px;color:var(--text)">👥 0/0</span></div></div>
+  <div class="top"><b id="title">💬 Genel</b><span class="act" id="cnt" onclick="openOnline()" style="font-size:9px;color:var(--text)">👥 0/0</span></div>
   <div class="body">
     <div class="content" id="content"></div>
-    <div class="uside" id="uside">
+    <div class="uside">
       <div class="uhd">👥 Kullanıcılar</div>
       <div class="uscroll">
         <div class="h">Çevrimiçi</div><div id="pOn" style="display:flex;flex-direction:column;gap:4px"></div>
@@ -151,6 +154,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-dark);color
     <div class="grid" id="avGrid"></div>
     <button class="btn sm" onclick="rerollAv()">🎲 Yeni Logolar</button>
     <button class="btn" onclick="saveProfile()">Profili Kaydet</button>
+    <div class="h">Kullanıcı adı</div>
+    <input id="newName" class="inp" placeholder="Yeni kullanıcı adı (a-z, 0-9, 3-20 karakter)">
+    <button class="btn" onclick="changeName()">Adımı Değiştir</button>
+    <div class="h">Kullanıcı Adı</div>
+    <input id="newName" class="inp" placeholder="Yeni kullanıcı adı">
+    <input id="renPass" type="password" class="inp" placeholder="Mevcut şifre">
+    <button class="btn" onclick="changeName()">Adı Değiştir</button>
     <div class="h">Şifre</div>
     <input id="newPass" type="password" class="inp" placeholder="Yeni şifre (en az 6 karakter)">
     <button class="btn" onclick="changePass()">Şifreyi Güncelle</button>
@@ -158,14 +168,27 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-dark);color
   </div>
 </div></div>
 
+<div class="modal" id="onM"><div class="mbox">
+  <div class="mhead">👥 Kullanıcılar</div>
+  <div class="mbody">
+    <div class="h">Çevrimiçi</div><div id="onL" style="display:flex;flex-direction:column;gap:4px"></div>
+    <div class="h">Çevrimdışı</div><div id="offL" style="display:flex;flex-direction:column;gap:4px"></div>
+  </div>
+</div></div>
 <!-- PROFİL -->
 <div class="modal" id="msgM"><div class="mbox">
   <div class="mhead" id="msgMHead">Mesaj</div>
   <div class="mbody">
+    <div class="rxpick" id="maRx"></div>
     <button class="btn" id="maEdit" onclick="startEdit()">✏️ Düzenle</button>
     <button class="btn red" id="maDel" onclick="delFromMenu()">🗑️ Sil</button>
+    <button class="btn" id="maRep" style="background:#f0a500" onclick="openReportFromMenu()">⚑ Şikayet Et</button>
     <button class="btn" style="background:var(--bg-card)" onclick="closeM('msgM')">Vazgeç</button>
   </div>
+</div></div>
+<div class="modal" id="repM"><div class="mbox">
+  <div class="mhead">⚑ Şikayet Sebebi</div>
+  <div class="mbody" id="repBody"></div>
 </div></div>
 <div class="modal" id="profM"><div class="mbox">
   <div class="mhead">👤 Profil</div>
@@ -188,8 +211,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-dark);color
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, updatePassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getDatabase, ref, push, onValue, set, remove, update, onDisconnect } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, updatePassword, updateEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getDatabase, ref, push, onValue, set, remove, update, onDisconnect, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
 const app = initializeApp({
   apiKey: "AIzaSyDrr7d_enIeE1pOk-Ov_23TpwKEpDrHRdw",
@@ -204,11 +227,19 @@ const auth = getAuth(app), db = getDatabase(app);
 
 const DEF_CH = { genel: { name: 'Sohbet', writeRole: 'all' }, duyurular: { name: 'Duyuru', writeRole: 'admin' } };
 const EMO = ['🦊','🐼','🐯','🦁','🐸','🐵','🐙','🦄','🐲','🦉','🐺','🐧','🦖','🤖','👾','🎮','⚡','🔥','💎','🌙','🚀','🎯','🍀','🌊'];
+const REACTS = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
 const COL = ['#5c7cfa','#22c55e','#f97316','#e11d48','#a855f7','#06b6d4','#eab308','#64748b','#14b8a6','#ec4899'];
 
 const S = { me:null, my:{}, users:{}, online:{}, chans:{}, groups:{}, style:{}, friends:{}, inReq:{}, outReq:{}, gIds:{},
   view:null, subs:[], mdata:{}, list:[], reply:null, lastMsgTime:0, lastCount:null, startedAt:Date.now(), lastNotice:null, opts:[], setAv:null, grAv:null, edit:null, act:null };
 let isReg = false, started = false;
+const LEET = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '@': 'a', '$': 's' };
+const normW = s => String(s || '').toLocaleLowerCase('tr-TR').replace(/[013457@$]/g, c => LEET[c]).replace(/[^a-zçğıöşü]/g, '');
+function hasBadWord(text) {
+  const words = String(text).split(/[^A-Za-zÇĞİÖŞÜçğıöşü0-9@$]+/).map(normW).filter(Boolean);
+  const bads = (S.bad || []).map(b => normW(b.word)).filter(Boolean);
+  return words.some(w => bads.some(b => w === b || (b.length >= 5 && w.includes(b))));
+}
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -220,7 +251,7 @@ const ROLE = uid => S.users[uid]?.role || 'user';
 const on = (p, cb) => onValue(ref(db, p), s => cb(s.val()));
 const openM = id => $(id).classList.add('on');
 window.closeM = id => $(id).classList.remove('on');
-window.toggleUsers = () => { $('uside').classList.toggle('on'); renderOnline(); };
+window.openOnline = () => { renderOnline(); openM('onM'); };
 function nameColor(uid) {
   if (ROLE(uid) === 'admin') return S.style.adminColor || '#ffd700';
   return S.users[uid]?.color || '#5c7cfa';
@@ -244,24 +275,49 @@ function applyRestrict() {
   const r = restrictText(), c = $('cin');
   if (c) { c.disabled = !!r; c.placeholder = r || 'Mesaj...'; }
 }
-function playSound() {
+let AC = null;
+function unlockAudio() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.type = 'sine'; o.frequency.setValueAtTime(587.33, ctx.currentTime); o.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + .1);
-    g.gain.setValueAtTime(.1, ctx.currentTime); g.gain.exponentialRampToValueAtTime(.01, ctx.currentTime + .1);
-    o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + .1);
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
   } catch (e) {}
+}
+['touchstart', 'touchend', 'mousedown', 'keydown'].forEach(ev => document.addEventListener(ev, unlockAudio, { passive: true }));
+function playSound(f1 = 587.33, f2 = 880, dur = .1) {
+  try {
+    unlockAudio(); if (!AC) return;
+    const ctx = AC, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(f1, ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(f2, ctx.currentTime + dur);
+    g.gain.setValueAtTime(.1, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.01, ctx.currentTime + dur);
+    o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + dur);
+  } catch (e) {}
+}
+function logAct(text) {
+  if (!S.me) return;
+  push(ref(db, 'adminLogs'), { text, by: S.my.username || 'Kullanıcı', time: Date.now() }).catch(() => {});
+}
+const ipKey = ip => ip.replace(/[.#$\[\]\/:]/g, '_');
+async function fetchIp() {
+  try { const r = await fetch('https://api.ipify.org?format=json'); return (await r.json()).ip || null; }
+  catch (e) { return null; }
+}
+function checkIpBan() {
+  if (S.ip && S.bans && S.bans[ipKey(S.ip)]) showBan('Bu IP adresi banlanmıştır.');
 }
 function showBan(msg) {
   $('banScr').innerHTML = `<div class="box" style="max-width:220px"><div class="t" style="color:var(--danger)">Erişim Engellendi</div><div class="sub" style="margin:8px 0">${esc(msg)}</div><button class="btn" onclick="logout()">Çıkış Yap</button></div>`;
   $('banScr').classList.add('on');
 }
+let noticeTimer = null;
 function showNotice(n) {
   const t = $('toast');
   t.innerText = '📢 ' + n.text; t.style.background = n.color || 'var(--accent)';
   t.classList.add('on'); if (n.sound) playSound();
-  setTimeout(() => t.classList.remove('on'), 6000);
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => t.classList.remove('on'), (n.duration || 6) * 1000);
 }
 function applyStyle() {
   const st = document.documentElement.style;
@@ -360,6 +416,22 @@ function startApp() {
   on('groups', v => { S.groups = v || {}; refresh(); });
   on('system/style', v => { S.style = v || {}; applyStyle(); refresh(); });
   on('system/slow', v => { S.slow = v || {}; });
+  on('bannedIps', v => { S.bans = v || {}; checkIpBan(); });
+  on('badWords', v => { S.bad = Object.values(v || {}); });
+  fetchIp().then(ip => {
+    S.ip = ip;
+    if (ip) update(ref(db, 'users/' + uid), { lastIp: ip }).catch(() => {});
+    checkIpBan();
+  });
+  ['genel', 'duyurular'].forEach(ch => {
+    let lastT = null;
+    onValue(query(ref(db, 'channelMessages/' + ch), limitToLast(1)), s => {
+      const v = s.val() || {}, k = Object.keys(v)[0]; if (!k) return;
+      const msg = v[k];
+      if (lastT !== null && msg.time > lastT && msg.senderUid !== S.me.uid && !(S.view?.kind === 'chan' && S.view.key === ch)) playSound();
+      lastT = Math.max(lastT || 0, msg.time || 0);
+    });
+  });
   on('system/notice', v => {
     if (!v || !v.time) return;
     if (v.time > S.startedAt && v.id !== S.lastNotice) { S.lastNotice = v.id; showNotice(v); }
@@ -390,15 +462,17 @@ function refresh() {
   if (k === 'friends') renderFriends();
   else if (k === 'dmlist') renderDmList();
   else if (k === 'grlist') renderGroups();
+  else if (k === 'chlist') renderChList();
   else if (S.view?.t) drawMsgs();
   applyRestrict();
 }
 function renderOnline() {
   const all = Object.keys(S.users), on = all.filter(u => S.online[u]), off = all.filter(u => !S.online[u]);
   $('cnt').innerText = `👥 ${on.length}/${all.length}`;
-  const li = u => `<div class="row" onclick="openProfile('${u}')">${av(S.users[u]?.avatar, 16)}<span class="grow">${esc(uname(u))}</span></div>`;
+  const li = u => `<div class="row" onclick="closeM('onM');openProfile('${u}')">${av(S.users[u]?.avatar, 16)}<span class="grow">${esc(uname(u))}</span></div>`;
   const onH = on.map(li).join('') || '<div class="h">Kimse çevrimiçi değil</div>';
   const offH = off.map(li).join('') || '<div class="h">Yok</div>';
+  $('onL').innerHTML = onH; $('offL').innerHTML = offH;
   $('pOn').innerHTML = onH; $('pOff').innerHTML = offH;
 }
 function clearSubs() { S.subs.forEach(f => f()); S.subs = []; }
@@ -407,7 +481,7 @@ function clearSubs() { S.subs.forEach(f => f()); S.subs = []; }
 window.go = (kind, key) => {
   clearSubs();
   S.view = { kind, key }; S.lastCount = null;
-  const tab = { chan: key === 'duyurular' ? 't-ann' : 't-chat', dm: 't-dm', sys: 't-dm', dmlist: 't-dm', friends: 't-fr', grlist: 't-gr', grp: 't-gr' }[kind];
+  const tab = { chan: key === 'duyurular' ? 't-ann' : key === 'genel' ? 't-chat' : 't-ch', dm: 't-dm', sys: 't-dm', dmlist: 't-dm', friends: 't-fr', grlist: 't-gr', grp: 't-gr', chlist: 't-ch' }[kind];
   document.querySelectorAll('.si').forEach(e => e.classList.remove('active'));
   if (tab) $(tab).classList.add('active');
   if (kind === 'dmlist' || kind === 'sys') $('d-dm').classList.remove('on');
@@ -424,6 +498,10 @@ window.go = (kind, key) => {
     $('title').innerText = '🧩 Gruplar';
     $('content').innerHTML = '<div class="scroll" id="flist"></div>';
     renderGroups();
+  } else if (kind === 'chlist') {
+    $('title').innerText = '# Kanallar';
+    $('content').innerHTML = '<div class="scroll" id="flist"></div>';
+    renderChList();
   } else openThread(kind, key);
 };
 
@@ -580,12 +658,15 @@ function msgHtml(m, i, t) {
     const seen = m.seenBy && Object.keys(m.seenBy).some(k => k !== S.me.uid);
     tick = `<span class="tick ${seen ? 'seen' : ''}">${seen ? '✓✓' : '✓'}</span>`;
   }
-  const rep = (!mine && t.receipts) ? `<span class="act" onclick="reportMsg(${i})">⚑</span>` : '';
+  const rep = (!mine && t.write) ? `<span class="act" onclick="reportMsg(${i})">⚑</span>` : '';
   const ed = m.edited ? '<span class="ed">düzenlendi</span>' : '';
+  const rxs = m.reactions ? Object.entries(m.reactions).filter(([, u]) => u && Object.keys(u).length) : [];
+  const rxHtml = rxs.length ? `<div class="rxs">${rxs.map(([e, u]) => `<span class="rxc ${u[S.me.uid] ? 'on' : ''}" onclick="event.stopPropagation();toggleRx('${m.path}','${m.id}','${e}')">${e} ${Object.keys(u).length}</span>`).join('')}</div>` : '';
   return `<div class="msg ${mine ? 'me' : ''} ${adm ? 'adm' : ''}" data-i="${i}" data-p="${m.path}" data-id="${m.id}">
     ${m.replyTo ? `<div class="rp"><b>${esc(m.replyTo.sender)}:</b> ${esc(m.replyTo.text)}</div>` : ''}
     <div class="hd"><span class="nm" style="color:${nameColor(m.senderUid)}" onclick="openProfile('${m.senderUid}')">${av(S.users[m.senderUid]?.avatar, 12)}${adm ? '👑 ' : ''}${esc(m.sender)}</span><span class="tm">${new Date(m.time).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}${tick}</span></div>
     <div class="tx" style="${adm ? 'color:' + (S.style.adminColor || '#ffd700') : ''}">${esc(m.text)}</div>
+    ${rxHtml}
     <div style="text-align:right">${ed}${rep}</div></div>`;
 }
 window.sendMsg = async () => {
@@ -593,8 +674,9 @@ window.sendMsg = async () => {
   const r = restrictText(); if (r) return alert(r);
   const inp = $('cin'); if (!inp) return;
   const text = inp.value.trim().slice(0, 500); if (!text) return;
+  if (hasBadWord(text)) return alert('Mesajınızda yasaklı bir kelime var. Lütfen düzenleyip tekrar deneyin.');
   if (S.edit) return saveEdit(text);
-  if (t.write === 'channelMessages/genel' && S.slow?.enabled && S.my.role !== 'admin') {
+  if (t.write.startsWith('channelMessages/') && S.slow?.enabled && S.my.role !== 'admin') {
     const last = S.list.filter(m => m.senderUid === S.me.uid).pop();
     const wait = last ? (S.slow.seconds || 10) * 1000 - (Date.now() - last.time) : 0;
     if (wait > 0) return alert(`Yavaş mod açık. ${Math.ceil(wait / 1000)} saniye sonra tekrar yazabilirsiniz.`);
@@ -614,18 +696,20 @@ window.sendMsg = async () => {
       mentions: Object.keys(mentions).length ? mentions : null,
       replyTo: S.reply ? { sender: S.reply.sender, text: S.reply.text.slice(0, 80) } : null
     });
-    inp.value = ''; cancelReply();
+    inp.value = ''; cancelReply(); playSound(880, 1200, .06);
   } catch (e) { alert('Mesaj gönderilemedi: ' + e.message); }
 };
 window.cancelReply = () => { S.reply = null; $('rbar')?.classList.remove('on'); };
 window.openMsgMenu = (path, id) => {
-  const m = S.list.find(x => x.path === path && x.id === id); if (!m) return;
+  const m = S.list.find(x => x.path === path && x.id === id); if (!m || !S.view?.t) return;
   const mine = m.senderUid === S.me.uid, canDel = mine || S.my.role === 'admin';
-  if (!mine && !canDel) return;
-  S.act = { path, id, text: m.text };
+  S.act = { path, id, text: m.text, sender: m.sender };
   $('msgMHead').innerText = mine ? '💬 Mesajım' : '💬 ' + m.sender;
   $('maEdit').style.display = mine ? '' : 'none';
   $('maDel').style.display = canDel ? '' : 'none';
+  $('maRep').style.display = (mine || !S.view.t.write) ? 'none' : '';
+  $('maRx').style.display = S.view.t.write ? '' : 'none';
+  $('maRx').innerHTML = REACTS.map(e => `<button class="rxb" onclick="toggleRx('${path}','${id}','${e}')">${e}</button>`).join('');
   openM('msgM');
 };
 window.startEdit = () => {
@@ -643,28 +727,57 @@ window.cancelEdit = () => {
 };
 async function saveEdit(text) {
   const e = S.edit;
-  if (!S.list.some(m => m.path === e.path && m.id === e.id)) { alert('Bu mesaj artık mevcut değil.'); return cancelEdit(); }
+  const old = S.list.find(m => m.path === e.path && m.id === e.id);
+  if (!old) { alert('Bu mesaj artık mevcut değil.'); return cancelEdit(); }
+  if (hasBadWord(text)) return alert('Mesajınızda yasaklı bir kelime var.');
   try {
     await update(ref(db, e.path + '/' + e.id), { text, edited: true, editedAt: Date.now() });
+    logAct(`Mesaj düzenlendi · ${e.path} · ${old.sender}: ${old.text} → ${text}`);
     cancelEdit();
   } catch (err) { alert('Mesaj düzenlenemedi: ' + err.message); }
 }
 window.delFromMenu = async () => {
   const a = S.act; closeM('msgM'); if (!a) return;
+  const m = S.list.find(x => x.path === a.path && x.id === a.id);
   if (!confirm('Mesaj silinsin mi?')) return;
   try {
     await remove(ref(db, a.path + '/' + a.id));
+    if (S.mdata[a.path]) delete S.mdata[a.path][a.id];
+    if (m) logAct(`Mesaj silindi · ${a.path} · ${m.sender}: ${m.text}`);
     if (S.edit && S.edit.id === a.id) cancelEdit();
+    drawMsgs();
   } catch (e) { alert('Mesaj silinemedi: ' + e.message); }
 };
-window.reportMsg = async i => {
-  const m = S.list[i]; if (!m) return;
-  const why = prompt('Şikayet sebebi nedir?'); if (!why || !why.trim()) return;
+window.toggleRx = async (path, id, e) => {
+  const m = S.list.find(x => x.path === path && x.id === id);
+  const has = !!m?.reactions?.[e]?.[S.me.uid];
+  closeM('msgM');
+  try { await set(ref(db, `${path}/${id}/reactions/${e}/${S.me.uid}`), has ? null : true); }
+  catch (err) { alert('Tepki eklenemedi: ' + err.message); }
+};
+const REASONS = ['Hakaret ve küfür', 'Spam', 'Reklam', 'Nefret söylemi', 'Uygunsuz içerik', 'Taciz', 'Diğer'];
+window.openReport = (path, id) => {
+  const m = S.list.find(x => x.path === path && x.id === id); if (!m) return;
+  S.rep = m;
+  $('repBody').innerHTML = REASONS.map((r, i) => `<button class="btn" onclick="sendReport(${i})">${r}</button>`).join('') +
+    `<button class="btn" style="background:var(--bg-card)" onclick="closeM('repM')">Vazgeç</button>`;
+  openM('repM');
+};
+window.openReportFromMenu = () => { const a = S.act; closeM('msgM'); if (a) openReport(a.path, a.id); };
+window.sendReport = async i => {
+  const m = S.rep; if (!m) return;
+  let reason = REASONS[i];
+  if (reason === 'Diğer') { reason = (prompt('Şikayet sebebini yazın:') || '').trim(); if (!reason) return; }
+  closeM('repM');
   try {
-    await push(ref(db, 'reports'), { reporter: S.me.uid, reporterName: S.my.username || '', reportedUid: m.senderUid, reportedName: m.sender, text: m.text, reason: why.trim().slice(0, 200), time: Date.now() });
+    await push(ref(db, 'reports'), {
+      reporter: S.me.uid, reporterName: S.my.username || '', reportedUid: m.senderUid, reportedName: m.sender,
+      text: m.text, reason: reason.slice(0, 200), msgPath: m.path, msgId: m.id, time: Date.now()
+    });
     alert('Şikayetiniz yöneticilere iletildi.');
   } catch (e) { alert('Hata: ' + e.message); }
 };
+window.reportMsg = i => { const m = S.list[i]; if (m) openReport(m.path, m.id); };
 // Sağa kaydırarak yanıtla
 let swX = 0, swY = 0, swEl = null, lpTimer = null;
 $('content').addEventListener('touchstart', e => {
@@ -705,6 +818,14 @@ $('content').addEventListener('mouseup', lpCancel);
 $('content').addEventListener('mouseleave', lpCancel);
 $('content').addEventListener('contextmenu', e => { if (e.target.closest?.('.msg')) e.preventDefault(); });
 
+// ---------- KANALLAR & LOG ----------
+window.renderChList = () => {
+  if (!$('flist')) return;
+  const ch = allChans();
+  $('flist').innerHTML = Object.entries(ch).map(([id, c]) =>
+    `<div class="row" onclick="go('chan','${id}')"><span class="grow"># ${esc(c.name)}</span><small>${c.writeRole === 'admin' ? 'yalnız yönetici' : 'herkes yazabilir'}</small></div>`
+  ).join('') || '<div class="h">Kanal yok</div>';
+};
 // ---------- GRUPLAR ----------
 function renderGroups() {
   const ids = Object.keys(S.gIds || {}).filter(g => S.groups[g]);
@@ -755,6 +876,31 @@ window.saveProfile = async () => {
     alert('Profil kaydedildi!');
   } catch (e) { alert('Hata: ' + e.message); }
 };
+window.changeName = async () => {
+  const n = ($('newName').value || '').trim();
+  if (!n) return alert('Yeni kullanıcı adı girin.');
+  if (!USER_RE.test(n)) return alert('Kullanıcı adında sembol, boşluk veya Türkçe harf kullanılamaz (sadece a-z ve 0-9).');
+  if (n.length < 3 || n.length > 20) return alert('Kullanıcı adı 3-20 karakter olmalı.');
+  if (n === S.my.username) return alert('Yeni ad mevcut adınızla aynı.');
+  const taken = Object.entries(S.users).some(([k, u]) => k !== S.me.uid && (u.username || '').toLowerCase() === n.toLowerCase());
+  if (taken) return alert('Bu kullanıcı adı zaten alınmış.');
+  const newEmail = emailOf(n);
+  try {
+    if (newEmail !== S.me.email) await updateEmail(S.me, newEmail);
+    await updateProfile(S.me, { displayName: n });
+    await update(ref(db, 'users/' + S.me.uid), { username: n, email: newEmail });
+    localStorage.setItem('saymodz_saved_user', n);
+    $('newName').value = '';
+    $('setName').innerHTML = `@${esc(n)}`;
+    alert('Kullanıcı adınız değiştirildi!');
+  } catch (e) {
+    const c = e.code || '';
+    if (c === 'auth/email-already-in-use') alert('Bu kullanıcı adı zaten alınmış.');
+    else if (c === 'auth/requires-recent-login') alert('Güvenlik için çıkış yapıp tekrar giriş yaptıktan sonra deneyin.');
+    else if (c === 'auth/network-request-failed') alert('İnternet bağlantısı yok.');
+    else alert('Kullanıcı adı değiştirilemedi: ' + e.message);
+  }
+};
 window.changePass = async () => {
   const p = $('newPass').value.trim();
   if (p.length < 6) return alert('Şifre en az 6 karakter olmalıdır!');
@@ -766,8 +912,38 @@ window.changePass = async () => {
   } catch (e) { alert('Şifre güncellenemedi (tekrar giriş yapmanız gerekebilir): ' + e.message); }
 };
 
+// ---------- KULLANICI ADI DEĞİŞTİRME ----------
+window.changeName = async () => {
+  const n = $('newName').value.trim(), p = $('renPass').value.trim();
+  const cur = S.my.username || '';
+  if (!n) return alert('Yeni kullanıcı adı girin.');
+  if (!USER_RE.test(n)) return alert('Kullanıcı adında sembol, boşluk veya Türkçe harf kullanılamaz (sadece a-z ve 0-9).');
+  if (n.length < 3 || n.length > 20) return alert('Kullanıcı adı 3-20 karakter olmalı.');
+  if (n.toLowerCase() === cur.toLowerCase()) return alert('Yeni ad mevcut adınızla aynı.');
+  if (Object.entries(S.users).some(([uid, u]) => uid !== S.me.uid && (u.username || '').toLowerCase() === n.toLowerCase()))
+    return alert('Bu kullanıcı adı zaten alınmış.');
+  if (!p) return alert('Değişiklik için mevcut şifrenizi girin.');
+  try {
+    await reauthenticateWithCredential(S.me, EmailAuthProvider.credential(S.me.email, p));
+    await updateEmail(S.me, emailOf(n));
+    await updateProfile(S.me, { displayName: n });
+    await update(ref(db, 'users/' + S.me.uid), { username: n, email: emailOf(n) });
+    localStorage.setItem('saymodz_saved_user', n);
+    $('newName').value = ''; $('renPass').value = '';
+    alert('Kullanıcı adınız değiştirildi: ' + n);
+  } catch (e) {
+    const c = e.code || '';
+    if (c === 'auth/email-already-in-use') alert('Bu kullanıcı adı zaten alınmış.');
+    else if (['auth/invalid-credential', 'auth/invalid-login-credentials', 'auth/wrong-password'].includes(c)) alert('Şifre hatalı.');
+    else if (c === 'auth/requires-recent-login') alert('Güvenlik için çıkış yapıp tekrar giriş yapın, sonra tekrar deneyin.');
+    else if (c === 'auth/network-request-failed') alert('İnternet bağlantısı yok.');
+    else alert('Ad değiştirilemedi: ' + e.message);
+  }
+};
+
 // ---------- BAŞLANGIÇ ----------
 document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('on'); }));
 </script>
 </body>
 </html>
+
