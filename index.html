@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -9,7 +10,7 @@
 *{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;user-select:none;-webkit-user-select:none;font-size:10px}
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-dark);color:var(--text)}
 #app{display:flex;width:100vw;height:100vh;position:relative;overflow:hidden}
-.overlay{position:absolute;inset:0;z-index:999;background:var(--bg-dark);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:10px}
+.overlay{position:absolute;inset:0;z-index:999;background:var(--bg-dark);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:10px;overflow:auto}
 .box{width:100%;max-width:200px;background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;padding:12px;text-align:center}
 .t{font-size:12px;font-weight:bold;color:var(--accent);margin-bottom:2px}
 .sub{font-size:8.5px;color:var(--text-sub);margin-bottom:8px}
@@ -209,9 +210,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-dark);color
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, updatePassword, updateEmail, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getDatabase, ref, push, onValue, set, remove, update, onDisconnect, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+const fbImp = async n => {
+  const map = { 'firebase-app': 'app', 'firebase-auth': 'auth', 'firebase-database': 'database' };
+  try { return await import(`https://www.gstatic.com/firebasejs/10.7.1/${n}.js`); }
+  catch (e) { return await import(`https://cdn.jsdelivr.net/npm/firebase@10.7.1/${map[n]}/+esm`); }
+};
+const { initializeApp } = await fbImp('firebase-app');
+const { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, updatePassword, updateEmail, reauthenticateWithCredential, EmailAuthProvider, deleteUser } = await fbImp('firebase-auth');
+const { getDatabase, ref, push, onValue, set, remove, update, onDisconnect, query, limitToLast } = await fbImp('firebase-database');
 
 const app = initializeApp({
   apiKey: "AIzaSyDrr7d_enIeE1pOk-Ov_23TpwKEpDrHRdw",
@@ -231,7 +237,7 @@ const COL = ['#5c7cfa','#22c55e','#f97316','#e11d48','#a855f7','#06b6d4','#eab30
 
 const S = { me:null, my:{}, users:{}, online:{}, chans:{}, groups:{}, style:{}, friends:{}, inReq:{}, outReq:{}, gIds:{},
   view:null, subs:[], mdata:{}, list:[], reply:null, lastMsgTime:0, lastCount:null, startedAt:Date.now(), lastNotice:null, opts:[], setAv:null, grAv:null, edit:null, act:null };
-let isReg = false, started = false;
+let isReg = false, started = false, registering = false;
 const LEET = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '@': 'a', '$': 's' };
 const normW = s => String(s || '').toLocaleLowerCase('tr-TR').replace(/[013457@$]/g, c => LEET[c]).replace(/[^a-zçğıöşü]/g, '');
 function hasBadWord(text) {
@@ -325,7 +331,7 @@ function applyStyle() {
 }
 
 // ---------- GİRİŞ ----------
-const USER_RE = /^[A-Za-z0-9]+$/;
+  const USER_RE = /^[A-Za-z0-9]+$/;
 function setErr(errId, msg) { const e = $(errId); e.textContent = msg || ''; e.classList.toggle('on', !!msg); }
 function setFieldErr(inpId, errId, msg) { $(inpId).classList.toggle('bad', !!msg); setErr(errId, msg); }
 window.clrErr = (inpId, errId) => setFieldErr(inpId, errId, '');
@@ -356,6 +362,7 @@ window.toggleReg = () => {
   $('authBtn').innerText = isReg ? 'Kayıt Ol' : 'Giriş Yap';
   $('toggleTxt').innerHTML = isReg ? 'Hesabın var mı? <span>Giriş Yap</span>' : 'Hesabın yok mu? <span>Kayıt Ol</span>';
 };
+const withTimeout = (p, ms = 15000) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error('timeout'), { code: 'app/timeout' })), ms))]);
 window.handleAuth = async () => {
   const u = $('authU').value.trim(), p = $('authP').value.trim();
   clearAuthErr();
@@ -364,11 +371,21 @@ window.handleAuth = async () => {
   try {
     const email = emailOf(u);
     if (isReg) {
-      const c = await createUserWithEmailAndPassword(auth, email, p);
-      await updateProfile(c.user, { displayName: u });
-      await set(ref(db, 'users/' + c.user.uid), { username: u, email, role: 'user', color: rnd(COL), avatar: randAv(), isBanned: false, createdAt: Date.now() });
+      let c = null;
+      registering = true;
+      try {
+        c = await withTimeout(createUserWithEmailAndPassword(auth, email, p));
+        await updateProfile(c.user, { displayName: u });
+        await set(ref(db, 'users/' + c.user.uid), { username: u, email, role: 'user', color: rnd(COL), avatar: randAv(), isBanned: false, createdAt: Date.now() });
+      } catch (err) {
+        if (c?.user) await deleteUser(c.user).catch(() => {});
+        throw err;
+      } finally { registering = false; }
+      S.me = c.user;
+      $('auth').style.display = 'none';
+      if (!started) startApp();
     } else {
-      await signInWithEmailAndPassword(auth, email, p);
+      await withTimeout(signInWithEmailAndPassword(auth, email, p));
     }
     localStorage.setItem('saymodz_saved_user', u);
     localStorage.setItem('saymodz_saved_pass', p);
@@ -379,8 +396,9 @@ window.handleAuth = async () => {
     else if (c === 'auth/weak-password') setFieldErr('authP', 'pErr', 'Şifre en az 6 karakter olmalı');
     else if (c === 'auth/too-many-requests') setErr('gErr', 'Çok fazla deneme yapıldı, lütfen biraz bekleyin');
     else if (c === 'auth/network-request-failed') setErr('gErr', 'İnternet bağlantısı yok');
+    else if (c === 'app/timeout') setErr('gErr', 'Sunucu yanıt vermedi, tekrar deneyin');
     else setErr('gErr', 'Hata: ' + e.message);
-  } finally { b.disabled = false; }
+  } finally { b.disabled = false; registering = false; }
 };
 window.logout = async () => {
   if (S.me) await remove(ref(db, 'online/' + S.me.uid)).catch(() => {});
@@ -392,6 +410,7 @@ window.logout = async () => {
 
 onAuthStateChanged(auth, user => {
   if (!user) { $('auth').style.display = 'flex'; return; }
+  if (registering) return;
   S.me = user;
   $('auth').style.display = 'none';
   if (!started) startApp();
@@ -655,6 +674,15 @@ function msgHtml(m, i, t) {
   const ed = m.edited ? '<span class="ed">düzenlendi</span>' : '';
   const rxs = m.reactions ? Object.entries(m.reactions).filter(([, u]) => u && Object.keys(u).length) : [];
   const rxHtml = rxs.length ? `<div class="rxs">${rxs.map(([e, u]) => `<span class="rxc ${u[S.me.uid] ? 'on' : ''}" onclick="event.stopPropagation();toggleRx('${m.path}','${m.id}','${e}')">${e} ${Object.keys(u).length}</span>`).join('')}</div>` : '';
+  let tick = '';
+  if (t.receipts && mine) {
+    const seen = m.seenBy && Object.keys(m.seenBy).some(k => k !== S.me.uid);
+    tick = `<span class="tick ${seen ? 'seen' : ''}">${seen ? '✓✓' : '✓'}</span>`;
+  }
+  const rep = (!mine && t.write) ? `<span class="act" onclick="reportMsg(${i})">⚑</span>` : '';
+  const ed = m.edited ? '<span class="ed">düzenlendi</span>' : '';
+  const rxs = m.reactions ? Object.entries(m.reactions).filter(([, u]) => u && Object.keys(u).length) : [];
+  const rxHtml = rxs.length ? `<div class="rxs">${rxs.map(([e, u]) => `<span class="rxc ${u[S.me.uid] ? 'on' : ''}" onclick="event.stopPropagation();toggleRx('${m.path}','${m.id}','${e}')">${e} ${Object.keys(u).length}</span>`).join('')}</div>` : '';
   return `<div class="msg ${mine ? 'me' : ''} ${adm ? 'adm' : ''}" data-i="${i}" data-p="${m.path}" data-id="${m.id}">
     ${m.replyTo ? `<div class="rp"><b>${esc(m.replyTo.sender)}:</b> ${esc(m.replyTo.text)}</div>` : ''}
     <div class="hd"><span class="nm" style="color:${nameColor(m.senderUid)}" onclick="openProfile('${m.senderUid}')">${av(S.users[m.senderUid]?.avatar, 12)}${adm ? '👑 ' : ''}${esc(m.sender)}</span><span class="tm">${new Date(m.time).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}${tick}</span></div>
@@ -664,7 +692,6 @@ function msgHtml(m, i, t) {
 }
 window.sendMsg = async () => {
   const t = S.view?.t; if (!t || t.readonly || !t.write) return;
-const t = S.view?.t; if (!t || t.readonly || !t.write) return;
   const r = restrictText(); if (r) return alert(r);
   const inp = $('cin'); if (!inp) return;
   const text = inp.value.trim().slice(0, 500); if (!text) return;
