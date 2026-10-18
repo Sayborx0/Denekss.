@@ -160,10 +160,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-dark);color
     <div class="h">Kullanıcı adı</div>
     <input id="newName" class="inp" placeholder="Yeni kullanıcı adı (a-z, 0-9, 3-20 karakter)">
     <button class="btn" onclick="changeName()">Adımı Değiştir</button>
-    <div class="h">Kullanıcı Adı</div>
-    <input id="newName" class="inp" placeholder="Yeni kullanıcı adı">
-    <input id="renPass" type="password" class="inp" placeholder="Mevcut şifre">
-    <button class="btn" onclick="changeName()">Adı Değiştir</button>
     <div class="h">Şifre</div>
     <input id="newPass" type="password" class="inp" placeholder="Yeni şifre (en az 6 karakter)">
     <button class="btn" onclick="changePass()">Şifreyi Güncelle</button>
@@ -329,7 +325,7 @@ function applyStyle() {
 }
 
 // ---------- GİRİŞ ----------
-  const USER_RE = /^[A-Za-z0-9]+$/;
+const USER_RE = /^[A-Za-z0-9]+$/;
 function setErr(errId, msg) { const e = $(errId); e.textContent = msg || ''; e.classList.toggle('on', !!msg); }
 function setFieldErr(inpId, errId, msg) { $(inpId).classList.toggle('bad', !!msg); setErr(errId, msg); }
 window.clrErr = (inpId, errId) => setFieldErr(inpId, errId, '');
@@ -662,12 +658,13 @@ function msgHtml(m, i, t) {
   return `<div class="msg ${mine ? 'me' : ''} ${adm ? 'adm' : ''}" data-i="${i}" data-p="${m.path}" data-id="${m.id}">
     ${m.replyTo ? `<div class="rp"><b>${esc(m.replyTo.sender)}:</b> ${esc(m.replyTo.text)}</div>` : ''}
     <div class="hd"><span class="nm" style="color:${nameColor(m.senderUid)}" onclick="openProfile('${m.senderUid}')">${av(S.users[m.senderUid]?.avatar, 12)}${adm ? '👑 ' : ''}${esc(m.sender)}</span><span class="tm">${new Date(m.time).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}${tick}</span></div>
-        <div class="tx" style="${adm ? 'color:' + (S.style.adminColor || '#ffd700') : ''}">${esc(m.text)}</div>
+    <div class="tx" style="${adm ? 'color:' + (S.style.adminColor || '#ffd700') : ''}">${esc(m.text)}</div>
     ${rxHtml}
     <div style="text-align:right">${ed}${rep}</div></div>`;
 }
 window.sendMsg = async () => {
   const t = S.view?.t; if (!t || t.readonly || !t.write) return;
+const t = S.view?.t; if (!t || t.readonly || !t.write) return;
   const r = restrictText(); if (r) return alert(r);
   const inp = $('cin'); if (!inp) return;
   const text = inp.value.trim().slice(0, 500); if (!text) return;
@@ -679,7 +676,7 @@ window.sendMsg = async () => {
     if (wait > 0) return alert(`Yavaş mod açık. ${Math.ceil(wait / 1000)} saniye sonra tekrar yazabilirsiniz.`);
   }
   const now = Date.now();
-  if (now - S.lastMsgTime < 2000) return alert('Lütfen mesaj atmak için 2 saniye bekleyin!');
+  if (now - S.lastMsgTime < 1000) return alert('Lütfen mesaj atmak için 1 saniye bekleyin!');
   S.lastMsgTime = now;
   const mentions = {};
   (text.match(/@[^\s@]+/g) || []).forEach(tag => {
@@ -909,39 +906,8 @@ window.changePass = async () => {
   } catch (e) { alert('Şifre güncellenemedi (tekrar giriş yapmanız gerekebilir): ' + e.message); }
 };
 
-// ---------- KULLANICI ADI DEĞİŞTİRME ----------
-window.changeName = async () => {
-  const n = $('newName').value.trim(), p = $('renPass').value.trim();
-  const cur = S.my.username || '';
-  if (!n) return alert('Yeni kullanıcı adı girin.');
-  if (!USER_RE.test(n)) return alert('Kullanıcı adında sembol, boşluk veya Türkçe harf kullanılamaz (sadece a-z ve 0-9).');
-  if (n.length < 3 || n.length > 20) return alert('Kullanıcı adı 3-20 karakter olmalı.');
-  if (n.toLowerCase() === cur.toLowerCase()) return alert('Yeni ad mevcut adınızla aynı.');
-  if (Object.entries(S.users).some(([uid, u]) => uid !== S.me.uid && (u.username || '').toLowerCase() === n.toLowerCase()))
-    return alert('Bu kullanıcı adı zaten alınmış.');
-  if (!p) return alert('Değişiklik için mevcut şifrenizi girin.');
-  try {
-    await reauthenticateWithCredential(S.me, EmailAuthProvider.credential(S.me.email, p));
-    await updateEmail(S.me, emailOf(n));
-    await updateProfile(S.me, { displayName: n });
-    await update(ref(db, 'users/' + S.me.uid), { username: n, email: emailOf(n) });
-    localStorage.setItem('saymodz_saved_user', n);
-    $('newName').value = ''; $('renPass').value = '';
-    alert('Kullanıcı adınız değiştirildi: ' + n);
-  } catch (e) {
-    const c = e.code || '';
-    if (c === 'auth/email-already-in-use') alert('Bu kullanıcı adı zaten alınmış.');
-    else if (['auth/invalid-credential', 'auth/invalid-login-credentials', 'auth/wrong-password'].includes(c)) alert('Şifre hatalı.');
-    else if (c === 'auth/requires-recent-login') alert('Güvenlik için çıkış yapıp tekrar giriş yapın, sonra tekrar deneyin.');
-    else if (c === 'auth/network-request-failed') alert('İnternet bağlantısı yok.');
-    else alert('Ad değiştirilemedi: ' + e.message);
-  }
-};
-
 // ---------- BAŞLANGIÇ ----------
 document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('on'); }));
 </script>
 </body>
 </html>
-
-  
