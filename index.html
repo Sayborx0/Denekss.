@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -331,7 +330,7 @@ function applyStyle() {
 }
 
 // ---------- GİRİŞ ----------
-  const USER_RE = /^[A-Za-z0-9]+$/;
+const USER_RE = /^[A-Za-z0-9]+$/;
 function setErr(errId, msg) { const e = $(errId); e.textContent = msg || ''; e.classList.toggle('on', !!msg); }
 function setFieldErr(inpId, errId, msg) { $(inpId).classList.toggle('bad', !!msg); setErr(errId, msg); }
 window.clrErr = (inpId, errId) => setFieldErr(inpId, errId, '');
@@ -673,116 +672,7 @@ function msgHtml(m, i, t) {
   const rep = (!mine && t.write) ? `<span class="act" onclick="reportMsg(${i})">⚑</span>` : '';
   const ed = m.edited ? '<span class="ed">düzenlendi</span>' : '';
   const rxs = m.reactions ? Object.entries(m.reactions).filter(([, u]) => u && Object.keys(u).length) : [];
-  const rxHtml = rxs.length ? `<div class="rxs">${rxs.map(([e, u]) => `<span class="rxc ${u[S.me.uid] ? 'on' : ''}" onclick="event.stopPropagation();toggleRx('${m.path}','${m.id}','${e}')">${e} ${Object.keys(u).length}</span>`).join('')}</div>` : '';
-  let tick = '';
-  if (t.receipts && mine) {
-    const seen = m.seenBy && Object.keys(m.seenBy).some(k => k !== S.me.uid);
-    tick = `<span class="tick ${seen ? 'seen' : ''}">${seen ? '✓✓' : '✓'}</span>`;
-  }
-  const rep = (!mine && t.write) ? `<span class="act" onclick="reportMsg(${i})">⚑</span>` : '';
-  const ed = m.edited ? '<span class="ed">düzenlendi</span>' : '';
-  const rxs = m.reactions ? Object.entries(m.reactions).filter(([, u]) => u && Object.keys(u).length) : [];
-  const rxHtml = rxs.length ? `<div class="rxs">${rxs.map(([e, u]) => `<span class="rxc ${u[S.me.uid] ? 'on' : ''}" onclick="event.stopPropagation();toggleRx('${m.path}','${m.id}','${e}')">${e} ${Object.keys(u).length}</span>`).join('')}</div>` : '';
-  return `<div class="msg ${mine ? 'me' : ''} ${adm ? 'adm' : ''}" data-i="${i}" data-p="${m.path}" data-id="${m.id}">
-    ${m.replyTo ? `<div class="rp"><b>${esc(m.replyTo.sender)}:</b> ${esc(m.replyTo.text)}</div>` : ''}
-    <div class="hd"><span class="nm" style="color:${nameColor(m.senderUid)}" onclick="openProfile('${m.senderUid}')">${av(S.users[m.senderUid]?.avatar, 12)}${adm ? '👑 ' : ''}${esc(m.sender)}</span><span class="tm">${new Date(m.time).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}${tick}</span></div>
-    <div class="tx" style="${adm ? 'color:' + (S.style.adminColor || '#ffd700') : ''}">${esc(m.text)}</div>
-    ${rxHtml}
-    <div style="text-align:right">${ed}${rep}</div></div>`;
-}
-window.sendMsg = async () => {
-  const t = S.view?.t; if (!t || t.readonly || !t.write) return;
-  const r = restrictText(); if (r) return alert(r);
-  const inp = $('cin'); if (!inp) return;
-  const text = inp.value.trim().slice(0, 500); if (!text) return;
-  if (hasBadWord(text)) return alert('Mesajınızda yasaklı bir kelime var. Lütfen düzenleyip tekrar deneyin.');
-  if (S.edit) return saveEdit(text);
-  if (t.write.startsWith('channelMessages/') && S.slow?.enabled && S.my.role !== 'admin') {
-    const last = S.list.filter(m => m.senderUid === S.me.uid).pop();
-    const wait = last ? (S.slow.seconds || 10) * 1000 - (Date.now() - last.time) : 0;
-    if (wait > 0) return alert(`Yavaş mod açık. ${Math.ceil(wait / 1000)} saniye sonra tekrar yazabilirsiniz.`);
-  }
-  const now = Date.now();
-  if (now - S.lastMsgTime < 1000) return alert('Lütfen mesaj atmak için 1 saniye bekleyin!');
-  S.lastMsgTime = now;
-  const mentions = {};
-  (text.match(/@[^\s@]+/g) || []).forEach(tag => {
-    const n = tag.slice(1).toLowerCase();
-    const uid = Object.keys(S.users).find(k => (S.users[k].username || '').toLowerCase() === n);
-    if (uid) mentions[uid] = true;
-  });
-  try {
-    await push(ref(db, t.write), {
-      senderUid: S.me.uid, sender: S.my.username || S.me.displayName || 'Kullanıcı', text, time: now,
-      mentions: Object.keys(mentions).length ? mentions : null,
-      replyTo: S.reply ? { sender: S.reply.sender, text: S.reply.text.slice(0, 80) } : null
-    });
-    inp.value = ''; cancelReply(); playSound(880, 1200, .06);
-  } catch (e) { alert('Mesaj gönderilemedi: ' + e.message); }
-};
-window.cancelReply = () => { S.reply = null; $('rbar')?.classList.remove('on'); };
-window.openMsgMenu = (path, id) => {
-  const m = S.list.find(x => x.path === path && x.id === id); if (!m || !S.view?.t) return;
-  const mine = m.senderUid === S.me.uid, canDel = mine || S.my.role === 'admin';
-  S.act = { path, id, text: m.text, sender: m.sender };
-  $('msgMHead').innerText = mine ? '💬 Mesajım' : '💬 ' + m.sender;
-  $('maEdit').style.display = mine ? '' : 'none';
-  $('maDel').style.display = canDel ? '' : 'none';
-  $('maRep').style.display = (mine || !S.view.t.write) ? 'none' : '';
-  $('maRx').style.display = S.view.t.write ? '' : 'none';
-  $('maRx').innerHTML = REACTS.map(e => `<button class="rxb" onclick="toggleRx('${path}','${id}','${e}')">${e}</button>`).join('');
-  openM('msgM');
-};
-window.startEdit = () => {
-  const a = S.act; closeM('msgM'); if (!a) return;
-  const inp = $('cin'); if (!inp) return;
-  cancelReply();
-  S.edit = { path: a.path, id: a.id };
-  inp.value = a.text; inp.focus();
-  $('etxt').innerText = '✏️ Mesaj düzenleniyor';
-  $('ebar').classList.add('on');
-};
-window.cancelEdit = () => {
-  S.edit = null; $('ebar')?.classList.remove('on');
-  const i = $('cin'); if (i) i.value = '';
-};
-async function saveEdit(text) {
-  const e = S.edit;
-  const old = S.list.find(m => m.path === e.path && m.id === e.id);
-  if (!old) { alert('Bu mesaj artık mevcut değil.'); return cancelEdit(); }
-  if (hasBadWord(text)) return alert('Mesajınızda yasaklı bir kelime var.');
-  try {
-    await update(ref(db, e.path + '/' + e.id), { text, edited: true, editedAt: Date.now() });
-    logAct(`Mesaj düzenlendi · ${e.path} · ${old.sender}: ${old.text} → ${text}`);
-    cancelEdit();
-  } catch (err) { alert('Mesaj düzenlenemedi: ' + err.message); }
-}
-window.delFromMenu = async () => {
-  const a = S.act; closeM('msgM'); if (!a) return;
-  const m = S.list.find(x => x.path === a.path && x.id === a.id);
-  if (!confirm('Mesaj silinsin mi?')) return;
-  try {
-    await remove(ref(db, a.path + '/' + a.id));
-    if (S.mdata[a.path]) delete S.mdata[a.path][a.id];
-    if (m) logAct(`Mesaj silindi · ${a.path} · ${m.sender}: ${m.text}`);
-    if (S.edit && S.edit.id === a.id) cancelEdit();
-    drawMsgs();
-  } catch (e) { alert('Mesaj silinemedi: ' + e.message); }
-};
-window.toggleRx = async (path, id, e) => {
-  const m = S.list.find(x => x.path === path && x.id === id);
-  const has = !!m?.reactions?.[e]?.[S.me.uid];
-  closeM('msgM');
-  try { await set(ref(db, `${path}/${id}/reactions/${e}/${S.me.uid}`), has ? null : true); }
-  catch (err) { alert('Tepki eklenemedi: ' + err.message); }
-};
-const REASONS = ['Hakaret ve küfür', 'Spam', 'Reklam', 'Nefret söylemi', 'Uygunsuz içerik', 'Taciz', 'Diğer'];
-window.openReport = (path, id) => {
-  const m = S.list.find(x => x.path === path && x.id === id); if (!m) return;
-  S.rep = m;
-  $('repBody').innerHTML = REASONS.map((r, i) => `<button class="btn" onclick="sendReport(${i})">${r}</button>`).join('') +
-    `<button class="btn" style="background:var(--bg-card)" onclick="closeM('repM')">Vazgeç</button>`;
-  openM('repM');
+    openM('repM');
 };
 window.openReportFromMenu = () => { const a = S.act; closeM('msgM'); if (a) openReport(a.path, a.id); };
 window.sendReport = async i => {
