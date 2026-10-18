@@ -672,8 +672,8 @@ function msgHtml(m, i, t) {
   const rep = (!mine && t.write) ? `<span class="act" onclick="reportMsg(${i})">⚑</span>` : '';
   const ed = m.edited ? '<span class="ed">düzenlendi</span>' : '';
   const rxs = m.reactions ? Object.entries(m.reactions).filter(([, u]) => u && Object.keys(u).length) : [];
-  const rxHtml = rxs.length ? `<div class="rxs">${rxs.map(([e, u]) => `<span class="rxc ${u[S.me.uid] ? 'on' : ''}" onclick="event.stopPropagation();toggleRx('${m.path}','${m.id}','${e}')">${e} ${Object.keys(u).length}</span>`).join('')}</div>` :
-    return `<div class="msg ${mine ? 'me' : ''} ${adm ? 'adm' : ''}" data-i="${i}" data-p="${m.path}" data-id="${m.id}">
+  const rxHtml = rxs.length ? `<div class="rxs">${rxs.map(([e, u]) => `<span class="rxc ${u[S.me.uid] ? 'on' : ''}" onclick="event.stopPropagation();toggleRx('${m.path}','${m.id}','${e}')">${e} ${Object.keys(u).length}</span>`).join('')}</div>` : '';
+   return `<div class="msg ${mine ? 'me' : ''} ${adm ? 'adm' : ''}" data-i="${i}" data-p="${m.path}" data-id="${m.id}">
     ${m.replyTo ? `<div class="rp"><b>${esc(m.replyTo.sender)}:</b> ${esc(m.replyTo.text)}</div>` : ''}
     <div class="hd"><span class="nm" style="color:${nameColor(m.senderUid)}" onclick="openProfile('${m.senderUid}')">${av(S.users[m.senderUid]?.avatar, 12)}${adm ? '👑 ' : ''}${esc(m.sender)}</span><span class="tm">${new Date(m.time).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}${tick}</span></div>
     <div class="tx" style="${adm ? 'color:' + (S.style.adminColor || '#ffd700') : ''}">${esc(m.text)}</div>
